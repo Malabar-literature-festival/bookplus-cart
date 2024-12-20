@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.1.1",
+    "@sparticuz/chromium": "^131.0.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "html-pdf-node": "^1.0.8",
@@ -20,6 +21,7 @@
     "nodemailer": "^6.9.16",
     "pdfkit": "^0.15.2",
     "puppeteer": "^23.11.1",
+    "puppeteer-core": "^23.11.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "shadcn-ui": "^0.9.4",
