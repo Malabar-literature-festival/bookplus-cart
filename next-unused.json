@@ -1,0 +1,6 @@
+{
+  "debug": true,
+  "include": ["pages", "components", "lib", "src"],
+  "exclude": [],
+  "entrypoints": ["pages"]
+}
