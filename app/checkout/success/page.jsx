@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { AlertCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { OrderConfirmedAnimation } from "@/components/LoadingAnimations";
+import { useCart } from "@/context/CartContext";
 
 export default function CheckoutSuccess() {
   const searchParams = useSearchParams();
@@ -11,6 +12,7 @@ export default function CheckoutSuccess() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const { clearCart } = useCart();
 
   useEffect(() => {
     if (orderId) {
@@ -28,6 +30,7 @@ export default function CheckoutSuccess() {
       const data = await response.json();
 
       if (data.success) {
+        clearCart();
         setOrder(data.data);
       } else {
         setError(data.error || "Failed to load order details");

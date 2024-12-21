@@ -1,31 +1,23 @@
 "use client";
-import { useState } from "react";
-import { Plus, Minus, X, ShoppingBag, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Plus, Minus, X, ChevronDown } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export default function BookCard({ book }) {
-  const { addToCart, cart } = useCart();
   const [showDetails, setShowDetails] = useState(false);
-  const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [selectedQuantity, setSelectedQuantity] = useState(0);
+  const { cartItems, addToCart } = useCart();
 
-  const cartItem = cart.items.find((item) => item.id === book._id);
-  const isInCart = !!cartItem;
-
-  const handleAddToCart = () => {
-    const cartBook = {
-      ...book,
-      id: book._id,
-    };
-
-    for (let i = 0; i < selectedQuantity; i++) {
-      addToCart(cartBook);
-    }
-    setSelectedQuantity(1);
-  };
+  // Update quantity whenever cart items change
+  useEffect(() => {
+    const savedItem = cartItems.find((item) => item.id === book._id);
+    setSelectedQuantity(savedItem ? savedItem.quantity : 0);
+  }, [book._id, cartItems]);
 
   const handleQuantityChange = (value) => {
-    const newValue = Math.max(1, Math.min(book.stock, Math.min(99, value)));
+    const newValue = Math.max(0, Math.min(book.stock, Math.min(99, value)));
     setSelectedQuantity(newValue);
+    addToCart(book, newValue);
   };
 
   return (
@@ -49,11 +41,7 @@ export default function BookCard({ book }) {
 
           {/* Status - Mobile & Desktop */}
           <div className="md:col-span-2">
-            {isInCart ? (
-              <span className="inline-flex text-xs md:text-sm font-medium bg-emerald-50 text-emerald-700 px-3 md:px-4 py-1.5 md:py-2 rounded-full">
-                In Cart ({cartItem.quantity})
-              </span>
-            ) : book.stock > 0 ? (
+            {book.stock > 0 ? (
               <span className="inline-flex text-xs md:text-sm font-medium bg-zinc-50 text-zinc-600 px-3 md:px-4 py-1.5 md:py-2 rounded-full">
                 {book.stock} in stock
               </span>
@@ -76,7 +64,7 @@ export default function BookCard({ book }) {
                 strokeWidth={1.5}
               />
             </button>
-            {!isInCart && book.stock > 0 && (
+            {book.stock > 0 && (
               <div className="flex items-center gap-3">
                 <div className="flex items-center border rounded-lg overflow-hidden shadow-sm">
                   <button
@@ -87,11 +75,11 @@ export default function BookCard({ book }) {
                   </button>
                   <input
                     type="number"
-                    min="1"
+                    min="0"
                     max={book.stock}
                     value={selectedQuantity}
                     onChange={(e) =>
-                      handleQuantityChange(parseInt(e.target.value) || 1)
+                      handleQuantityChange(parseInt(e.target.value) || 0)
                     }
                     className="w-12 text-center border-x focus:outline-none"
                   />
@@ -102,13 +90,6 @@ export default function BookCard({ book }) {
                     <Plus className="w-4 h-4 text-zinc-600" />
                   </button>
                 </div>
-                <button
-                  onClick={handleAddToCart}
-                  className="p-2 rounded-full bg-zinc-800 hover:bg-zinc-900 text-white transition-colors"
-                  title="Add to Cart"
-                >
-                  <ShoppingBag className="w-5 h-5" strokeWidth={1.5} />
-                </button>
               </div>
             )}
           </div>
@@ -140,7 +121,7 @@ export default function BookCard({ book }) {
                 <span className="text-xl md:text-2xl font-light text-zinc-900">
                   ₹{book.price.toFixed(2)}
                 </span>
-                {!isInCart && book.stock > 0 && (
+                {book.stock > 0 && (
                   <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
                     <div className="flex items-center border rounded-lg overflow-hidden shadow-sm">
                       <button
@@ -153,11 +134,11 @@ export default function BookCard({ book }) {
                       </button>
                       <input
                         type="number"
-                        min="1"
+                        min="0"
                         max={book.stock}
                         value={selectedQuantity}
                         onChange={(e) =>
-                          handleQuantityChange(parseInt(e.target.value) || 1)
+                          handleQuantityChange(parseInt(e.target.value) || 0)
                         }
                         className="w-12 text-center border-x focus:outline-none"
                       />
@@ -171,13 +152,10 @@ export default function BookCard({ book }) {
                       </button>
                     </div>
                     <button
-                      onClick={() => {
-                        handleAddToCart();
-                        setShowDetails(false);
-                      }}
+                      onClick={() => setShowDetails(false)}
                       className="w-full md:w-auto px-8 py-3 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-all duration-200 shadow-sm hover:shadow text-center"
                     >
-                      Add to Cart
+                      Done
                     </button>
                   </div>
                 )}

@@ -1,148 +1,75 @@
-// context/CartContext.js
 "use client";
-import {
-  createContext,
-  useContext,
-  useReducer,
-  useEffect,
-  useState,
-} from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 const CartContext = createContext();
 
-const initialState = {
-  items: [],
-};
-
-const cartReducer = (state, action) => {
-  let newState;
-
-  switch (action.type) {
-    case "ADD_TO_CART":
-      const existingItem = state.items.find(
-        (item) => item.id === action.payload.id
-      );
-
-      if (existingItem) {
-        if (existingItem.quantity >= action.payload.stock) {
-          return state;
-        }
-
-        newState = {
-          ...state,
-          items: state.items.map((item) =>
-            item.id === action.payload.id
-              ? { ...item, quantity: Math.min(item.quantity + 1, item.stock) }
-              : item
-          ),
-        };
-      } else {
-        newState = {
-          ...state,
-          items: [...state.items, { ...action.payload, quantity: 1 }],
-        };
-      }
-      break;
-
-    case "REMOVE_FROM_CART":
-      newState = {
-        ...state,
-        items: state.items.filter((item) => item.id !== action.payload),
-      };
-      break;
-
-    case "UPDATE_QUANTITY":
-      if (action.payload.quantity === 0) {
-        newState = {
-          ...state,
-          items: state.items.filter((item) => item.id !== action.payload.id),
-        };
-      } else {
-        newState = {
-          ...state,
-          items: state.items.map((item) =>
-            item.id === action.payload.id
-              ? {
-                  ...item,
-                  quantity: Math.min(action.payload.quantity, item.stock),
-                }
-              : item
-          ),
-        };
-      }
-      break;
-
-    case "CLEAR_CART":
-      newState = initialState;
-      break;
-
-    default:
-      return state;
-  }
-
-  return newState;
-};
-
 export function CartProvider({ children }) {
-  const [mounted, setMounted] = useState(false);
-  const [cart, dispatch] = useReducer(cartReducer, initialState);
+  const [cartItems, setCartItems] = useState([]);
 
-  // Handle initial load from localStorage
+  // Initialize cart from localStorage
   useEffect(() => {
-    const savedCart = localStorage.getItem("cart");
-    if (savedCart) {
-      dispatch({ type: "HYDRATE", payload: JSON.parse(savedCart) });
-    }
-    setMounted(true);
+    const savedItems = JSON.parse(
+      localStorage.getItem("checkoutItems") || "[]"
+    );
+    setCartItems(savedItems);
   }, []);
 
-  // Save to localStorage on cart changes
-  useEffect(() => {
-    if (mounted) {
-      localStorage.setItem("cart", JSON.stringify(cart));
-    }
-  }, [cart, mounted]);
+  const updateCart = (items) => {
+    setCartItems(items);
+    localStorage.setItem("checkoutItems", JSON.stringify(items));
+  };
 
-  const addToCart = (book) => {
-    dispatch({ type: "ADD_TO_CART", payload: book });
+  const addToCart = (book, quantity) => {
+    const currentItems = [...cartItems];
+    const existingItemIndex = currentItems.findIndex(
+      (item) => item.id === book._id
+    );
+
+    if (existingItemIndex >= 0) {
+      currentItems[existingItemIndex] = {
+        ...currentItems[existingItemIndex],
+        quantity,
+      };
+    } else {
+      currentItems.push({
+        ...book,
+        id: book._id,
+        quantity,
+      });
+    }
+
+    updateCart(currentItems);
   };
 
   const removeFromCart = (bookId) => {
-    dispatch({ type: "REMOVE_FROM_CART", payload: bookId });
-  };
-
-  const updateQuantity = (bookId, quantity) => {
-    dispatch({ type: "UPDATE_QUANTITY", payload: { id: bookId, quantity } });
+    const updatedItems = cartItems.filter((item) => item.id !== bookId);
+    updateCart(updatedItems);
   };
 
   const clearCart = () => {
-    dispatch({ type: "CLEAR_CART" });
+    updateCart([]);
   };
 
-  const cartTotal = cart.items.reduce(
-    (total, item) => total + item.price * item.quantity,
-    0
-  );
+  const getCartItemCount = () => {
+    return cartItems.length;
+  };
 
-  const cartItemsCount = cart.items.reduce(
-    (total, item) => total + item.quantity,
-    0
-  );
-
-  if (!mounted) {
-    return null; // or a loading spinner
-  }
+  const getCartTotal = () => {
+    return cartItems.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+  };
 
   return (
     <CartContext.Provider
       value={{
-        cart,
+        cartItems,
         addToCart,
         removeFromCart,
-        updateQuantity,
         clearCart,
-        cartTotal,
-        cartItemsCount,
+        getCartItemCount,
+        getCartTotal,
       }}
     >
       {children}

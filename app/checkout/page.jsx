@@ -1,13 +1,12 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useCart } from "@/context/CartContext";
-import { ShoppingBag, AlertCircle, Loader2 } from "lucide-react";
+import { ShoppingBag, AlertCircle, X } from "lucide-react";
 import { ProcessingLoader } from "@/components/LoadingAnimations";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cart, clearCart, cartTotal } = useCart();
+  const [checkoutItems, setCheckoutItems] = useState([]);
   const [loading, setLoading] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
   const [error, setError] = useState(null);
@@ -19,6 +18,34 @@ export default function CheckoutPage() {
     city: "",
     postalCode: "",
   });
+
+  useEffect(() => {
+    // Get checkout items from localStorage
+    const savedItems = localStorage.getItem("checkoutItems");
+    if (savedItems) {
+      const items = JSON.parse(savedItems);
+      if (items.length === 0) {
+        router.push("/"); // Redirect to home if no items
+      } else {
+        setCheckoutItems(items);
+      }
+    } else {
+      router.push("/"); // Redirect to home if no items
+    }
+  }, [router]);
+
+  const removeItem = (itemId) => {
+    const updatedItems = checkoutItems.filter((item) => item.id !== itemId);
+    setCheckoutItems(updatedItems);
+    localStorage.setItem("checkoutItems", JSON.stringify(updatedItems));
+
+    // Dispatch custom event to update the count in the header
+    window.dispatchEvent(new Event("checkoutItemsUpdated"));
+
+    if (updatedItems.length === 0) {
+      router.push("/");
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -34,7 +61,7 @@ export default function CheckoutPage() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ items: cart.items }),
+        body: JSON.stringify({ items: checkoutItems }),
       });
 
       const validationData = await validateResponse.json();
@@ -47,7 +74,7 @@ export default function CheckoutPage() {
       const invalidItems = validationData.data.filter((item) => !item.valid);
       if (invalidItems.length > 0) {
         const errorMessages = invalidItems.map((item) => item.error);
-        throw new Error(`Cart validation failed: ${errorMessages.join(", ")}`);
+        throw new Error(`Validation failed: ${errorMessages.join(", ")}`);
       }
 
       // Process checkout
@@ -68,7 +95,7 @@ export default function CheckoutPage() {
             city: formData.city,
             postalCode: formData.postalCode,
           },
-          items: cart.items.map((item) => ({
+          items: checkoutItems.map((item) => ({
             bookId: item.id,
             quantity: item.quantity,
           })),
@@ -85,14 +112,10 @@ export default function CheckoutPage() {
       setProcessingStep(3);
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Navigate to success page
+      // Clear checkout items and navigate to success page
+      localStorage.removeItem("checkoutItems");
       const successUrl = `/checkout/success?orderId=${data.data.orderId}`;
       router.push(successUrl);
-
-      // Clear cart after navigation
-      setTimeout(() => {
-        clearCart();
-      }, 100);
     } catch (error) {
       setError(error.message);
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -108,6 +131,15 @@ export default function CheckoutPage() {
       [e.target.name]: e.target.value,
     });
   };
+
+  const total = checkoutItems.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  if (checkoutItems.length === 0) {
+    return null;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
@@ -127,11 +159,11 @@ export default function CheckoutPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Contact Information Section */}
           <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-6">
             <h2 className="text-xl font-medium text-zinc-900 mb-6">
               Contact Information
             </h2>
-
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
@@ -180,6 +212,7 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Shipping Address Section */}
           <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-6">
             <h2 className="text-xl font-medium text-zinc-900 mb-6">
               Shipping Address
@@ -235,16 +268,17 @@ export default function CheckoutPage() {
             </div>
           </div>
 
+          {/* Order Summary Section */}
           <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-6">
             <h2 className="text-xl font-medium text-zinc-900 mb-6">
               Order Summary
             </h2>
 
             <div className="space-y-4">
-              {cart.items.map((item) => (
+              {checkoutItems.map((item) => (
                 <div
                   key={item.id}
-                  className="flex justify-between py-4 border-t border-zinc-100"
+                  className="flex items-center justify-between py-4 border-t border-zinc-100"
                 >
                   <div className="flex-1">
                     <h3 className="text-sm font-medium text-zinc-900">
@@ -254,9 +288,18 @@ export default function CheckoutPage() {
                       Quantity: {item.quantity}
                     </p>
                   </div>
-                  <span className="text-sm font-medium text-zinc-900">
-                    ₹{(item.price * item.quantity).toFixed(2)}
-                  </span>
+                  <div className="flex items-center gap-4">
+                    <span className="text-sm font-medium text-zinc-900">
+                      ₹{(item.price * item.quantity).toFixed(2)}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeItem(item.id)}
+                      className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                    >
+                      <X className="w-5 h-5" strokeWidth={1.5} />
+                    </button>
+                  </div>
                 </div>
               ))}
 
@@ -266,7 +309,7 @@ export default function CheckoutPage() {
                     Total
                   </span>
                   <span className="text-xl font-medium text-zinc-900">
-                    ₹{cartTotal.toFixed(2)}
+                    ₹{total.toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -292,7 +335,11 @@ export default function CheckoutPage() {
         </form>
       </div>
 
-      {loading && <ProcessingLoader step={processingStep} />}
+      {loading && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center z-50">
+          <ProcessingLoader step={processingStep} />
+        </div>
+      )}
     </div>
   );
 }

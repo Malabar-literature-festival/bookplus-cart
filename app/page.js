@@ -2,6 +2,8 @@
 import { useState, useEffect } from "react";
 import { Book, Search } from "lucide-react";
 import BookCard from "@/components/BookCard";
+import { useRouter } from "next/navigation";
+import { useCart } from "@/context/CartContext";
 
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,31 +40,20 @@ export default function Home() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white mt-10">
-      <header className="pt-16 md:pt-32 pb-8 md:pb-16 px-4 md:px-6">
-        <div className="max-w-6xl mx-auto">
-          <div className="flex items-center gap-3 mb-4 md:mb-6">
-            <Book
-              className="w-8 md:w-10 h-8 md:h-10 text-zinc-800"
-              strokeWidth={1.5}
-            />
-            <span className="text-xs md:text-sm tracking-widest text-zinc-400 font-light">
-              COLLECTION
-            </span>
-          </div>
-          <h1 className="text-3xl md:text-5xl font-medium text-zinc-900 mb-6 md:mb-8 tracking-tight">
-            Discover Books Worth Reading
-          </h1>
-
-          <div className="relative max-w-xl">
-            <Search className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
-            <input
-              type="text"
-              placeholder="Search by title or author..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 md:pl-12 pr-4 py-3 md:py-4 rounded-xl border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 transition-all duration-200 shadow-sm text-sm md:text-base"
-            />
+    <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white">
+      <header className="pt-14 pb-2 px-4">
+        <div className="flex items-center justify-center min-h-[120px]">
+          <div className="relative w-full max-w-lg mx-4">
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-gray-50 border border-gray-100 hover:border-gray-200 transition-all">
+              <Search className="w-5 h-5 text-gray-400 ml-3" />
+              <input
+                type="text"
+                placeholder="Search by title or author..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-transparent py-2 px-1 text-gray-800 placeholder-gray-400 focus:outline-none text-base"
+              />
+            </div>
           </div>
         </div>
       </header>
