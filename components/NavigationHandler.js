@@ -2,6 +2,7 @@
 "use client";
 import { usePathname } from "next/navigation";
 import Navbar from "@/components/Navbar";
+import AdminAuth from "@/components/AdminAuth";
 
 export default function NavigationHandler({ children }) {
   const pathname = usePathname();
@@ -10,7 +11,11 @@ export default function NavigationHandler({ children }) {
   return (
     <>
       {!isAdminRoute && <Navbar />}
-      <main>{children}</main>
+      {isAdminRoute ? (
+        <AdminAuth>{children}</AdminAuth>
+      ) : (
+        <main>{children}</main>
+      )}
     </>
   );
 }
