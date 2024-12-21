@@ -1,12 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import Link from "next/link";
 import { OrderConfirmedAnimation } from "@/components/LoadingAnimations";
 import { useCart } from "@/context/CartContext";
 
 export default function CheckoutSuccess() {
+  return (
+    <Suspense>
+      <CheckoutSuccessContent />
+    </Suspense>
+  );
+}
+
+function CheckoutSuccessContent() {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
   const [order, setOrder] = useState(null);
@@ -39,7 +47,6 @@ export default function CheckoutSuccess() {
       setError("Failed to load order details");
       console.error("Error fetching order:", error);
     } finally {
-      // Add a minimum loading time for better UX
       setTimeout(() => {
         setLoading(false);
       }, 1000);
