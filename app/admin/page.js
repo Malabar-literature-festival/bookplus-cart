@@ -1,14 +1,16 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   PlusCircle,
   Pencil,
   Trash2,
   X,
   Upload,
+  Download,
   Book,
   Search,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import Image from "next/image";
 
 export default function AdminBooks() {
@@ -17,6 +19,7 @@ export default function AdminBooks() {
   const [showEditModal, setShowEditModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [editingBook, setEditingBook] = useState(null);
+  const fileInputRef = useRef(null);
   const [newBook, setNewBook] = useState({
     title: "",
     author: "",
@@ -84,7 +87,6 @@ export default function AdminBooks() {
   const handleEditBook = async (e) => {
     e.preventDefault();
     try {
-      console.log(editingBook);
       const response = await fetch(`/api/books/${editingBook._id}`, {
         method: "PUT",
         headers: {
@@ -121,6 +123,85 @@ export default function AdminBooks() {
     }
   };
 
+  // Handle Excel Import
+  const handleFileUpload = async (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      try {
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+          const data = new Uint8Array(e.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const worksheet = workbook.Sheets[sheetName];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+          // Validate and format the data
+          const formattedData = jsonData.map((row) => ({
+            title: row.title || "",
+            author: row.author || "",
+            price: parseFloat(row.price) || 0,
+            description: row.description || "",
+            stock: parseInt(row.stock) || 0,
+          }));
+
+          // Upload all books
+          for (const book of formattedData) {
+            try {
+              const response = await fetch("/api/books", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify(book),
+              });
+              const data = await response.json();
+              if (!data.success) {
+                console.error("Error adding book:", book.title);
+              }
+            } catch (error) {
+              console.error("Error uploading book:", error);
+            }
+          }
+
+          // Refresh the books list
+          fetchBooks();
+          alert("Books imported successfully!");
+        };
+        reader.readAsArrayBuffer(file);
+      } catch (error) {
+        console.error("Error processing file:", error);
+        alert("Error processing file. Please check the file format.");
+      }
+    }
+  };
+
+  // Handle Excel/CSV Export
+  const handleExport = (format = "xlsx") => {
+    // Prepare the data for export
+    const exportData = books.map((book) => ({
+      title: book.title,
+      author: book.author,
+      price: book.price,
+      description: book.description,
+      stock: book.stock,
+    }));
+
+    // Create workbook and worksheet
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.json_to_sheet(exportData);
+
+    // Add worksheet to workbook
+    XLSX.utils.book_append_sheet(wb, ws, "Books");
+
+    // Generate and download file
+    if (format === "xlsx") {
+      XLSX.writeFile(wb, "books.xlsx");
+    } else {
+      XLSX.writeFile(wb, "books.csv");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-zinc-50">
       <header className="bg-white border-b border-zinc-200">
@@ -132,13 +213,49 @@ export default function AdminBooks() {
                 Books Management
               </h1>
             </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors"
-            >
-              <PlusCircle className="w-5 h-5" />
-              Add New Book
-            </button>
+            <div className="flex items-center gap-3">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileUpload}
+                accept=".xlsx,.xls"
+                className="hidden"
+              />
+              <button
+                onClick={() => fileInputRef.current.click()}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-800 rounded-lg hover:bg-zinc-200 transition-colors"
+              >
+                <Upload className="w-5 h-5" />
+                Import Excel
+              </button>
+              <div className="relative group">
+                <button className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-800 rounded-lg hover:bg-zinc-200 transition-colors">
+                  <Download className="w-5 h-5" />
+                  Export
+                </button>
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                  <button
+                    onClick={() => handleExport("xlsx")}
+                    className="w-full px-4 py-2 text-left hover:bg-zinc-50 rounded-t-lg"
+                  >
+                    Export as Excel
+                  </button>
+                  <button
+                    onClick={() => handleExport("csv")}
+                    className="w-full px-4 py-2 text-left hover:bg-zinc-50 rounded-b-lg"
+                  >
+                    Export as CSV
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors"
+              >
+                <PlusCircle className="w-5 h-5" />
+                Add New Book
+              </button>
+            </div>
           </div>
 
           {/* Search Bar */}
@@ -181,7 +298,7 @@ export default function AdminBooks() {
             <div className="col-span-2 text-sm font-medium text-zinc-500">
               Stock
             </div>
-            <div className="col-span-1 text-sm font-medium text-zinc-500 text-right">
+            <div className="col-span-2 text-sm font-medium text-zinc-500 text-right">
               Actions
             </div>
           </div>
@@ -213,7 +330,7 @@ export default function AdminBooks() {
                     {book.stock} units
                   </span>
                 </div>
-                <div className="col-span-1 flex items-center justify-end gap-2">
+                <div className="col-span-2 flex items-center justify-end gap-2">
                   <button
                     onClick={() => handleEditClick(book)}
                     className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
