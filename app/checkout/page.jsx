@@ -3,10 +3,11 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, AlertCircle, X } from "lucide-react";
 import { ProcessingLoader } from "@/components/LoadingAnimations";
+import { useCart } from "@/context/CartContext"; // Import useCart
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const [checkoutItems, setCheckoutItems] = useState([]);
+  const { cartItems, removeFromCart } = useCart(); // Use cart context
   const [loading, setLoading] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
   const [error, setError] = useState(null);
@@ -20,29 +21,15 @@ export default function CheckoutPage() {
   });
 
   useEffect(() => {
-    // Get checkout items from localStorage
-    const savedItems = localStorage.getItem("checkoutItems");
-    if (savedItems) {
-      const items = JSON.parse(savedItems);
-      if (items.length === 0) {
-        router.push("/"); // Redirect to home if no items
-      } else {
-        setCheckoutItems(items);
-      }
-    } else {
-      router.push("/"); // Redirect to home if no items
+    if (cartItems.length === 0) {
+      router.push("/");
     }
-  }, [router]);
+  }, [cartItems, router]);
 
   const removeItem = (itemId) => {
-    const updatedItems = checkoutItems.filter((item) => item.id !== itemId);
-    setCheckoutItems(updatedItems);
-    localStorage.setItem("checkoutItems", JSON.stringify(updatedItems));
+    removeFromCart(itemId); // Use context method instead of local storage
 
-    // Dispatch custom event to update the count in the header
-    window.dispatchEvent(new Event("checkoutItemsUpdated"));
-
-    if (updatedItems.length === 0) {
+    if (cartItems.length <= 1) { // Check if this was the last item
       router.push("/");
     }
   };
@@ -56,26 +43,26 @@ export default function CheckoutPage() {
     try {
       // Cart validation
       setProcessingStep(1);
-      const validateResponse = await fetch("/api/cart/validate", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ items: checkoutItems }),
-      });
+      // const validateResponse = await fetch("/api/cart/validate", {
+      //   method: "POST",
+      //   headers: {
+      //     "Content-Type": "application/json",
+      //   },
+      //   body: JSON.stringify({ items: cartItems }),
+      // });
 
-      const validationData = await validateResponse.json();
+      // const validationData = await validateResponse.json();
 
-      if (!validationData.success) {
-        throw new Error(validationData.error);
-      }
+      // if (!validationData.success) {
+      //   throw new Error(validationData.error);
+      // }
 
-      // Check invalid items
-      const invalidItems = validationData.data.filter((item) => !item.valid);
-      if (invalidItems.length > 0) {
-        const errorMessages = invalidItems.map((item) => item.error);
-        throw new Error(`Validation failed: ${errorMessages.join(", ")}`);
-      }
+      // // Check invalid items
+      // const invalidItems = validationData.data.filter((item) => !item.valid);
+      // if (invalidItems.length > 0) {
+      //   const errorMessages = invalidItems.map((item) => item.error);
+      //   throw new Error(`Validation failed: ${errorMessages.join(", ")}`);
+      // }
 
       // Process checkout
       setProcessingStep(2);
@@ -95,7 +82,7 @@ export default function CheckoutPage() {
             city: formData.city,
             postalCode: formData.postalCode,
           },
-          items: checkoutItems.map((item) => ({
+          items: cartItems.map((item) => ({
             bookId: item.id,
             quantity: item.quantity,
           })),
@@ -112,8 +99,7 @@ export default function CheckoutPage() {
       setProcessingStep(3);
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Clear checkout items and navigate to success page
-      localStorage.removeItem("checkoutItems");
+      // Navigate to success page
       const successUrl = `/checkout/success?orderId=${data.data.orderId}`;
       router.push(successUrl);
     } catch (error) {
@@ -132,12 +118,7 @@ export default function CheckoutPage() {
     });
   };
 
-  const total = checkoutItems.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-
-  if (checkoutItems.length === 0) {
+  if (cartItems.length === 0) {
     return null;
   }
 
@@ -275,44 +256,36 @@ export default function CheckoutPage() {
             </h2>
 
             <div className="space-y-4">
-              {checkoutItems.map((item) => (
+              {cartItems.map((item) => (
                 <div
                   key={item.id}
                   className="flex items-center justify-between py-4 border-t border-zinc-100"
                 >
                   <div className="flex-1">
-                    <h3 className="text-sm font-medium text-zinc-900">
-                      {item.title}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="text-sm font-medium text-zinc-900">
+                        {item.title}
+                      </h3>
+                      <span className="text-xs bg-zinc-100 text-zinc-600 px-2 py-0.5 rounded-full">
+                        Class {item.class}
+                      </span>
+                    </div>
+                    <p className="text-sm text-zinc-500">
+                      {item.subject} • {item.section}
+                    </p>
                     <p className="text-sm text-zinc-500 mt-1">
                       Quantity: {item.quantity}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4">
-                    <span className="text-sm font-medium text-zinc-900">
-                      ₹{(item.price * item.quantity).toFixed(2)}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeItem(item.id)}
-                      className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                    >
-                      <X className="w-5 h-5" strokeWidth={1.5} />
-                    </button>
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => removeItem(item.id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                  >
+                    <X className="w-5 h-5" strokeWidth={1.5} />
+                  </button>
                 </div>
               ))}
-
-              <div className="pt-4 border-t border-zinc-200">
-                <div className="flex justify-between items-center">
-                  <span className="text-base font-medium text-zinc-900">
-                    Total
-                  </span>
-                  <span className="text-xl font-medium text-zinc-900">
-                    ₹{total.toFixed(2)}
-                  </span>
-                </div>
-              </div>
             </div>
           </div>
 

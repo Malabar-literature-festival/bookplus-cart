@@ -3,23 +3,37 @@ import mongoose from "mongoose";
 
 const BookSchema = new mongoose.Schema(
   {
+    serialNumber: {
+      type: Number,
+      required: true,
+    },
+    class: {
+      type: Number,
+      required: true,
+    },
+    subject: {
+      type: String,
+      required: true,
+    },
     title: {
       type: String,
+      required: true,
     },
-    author: {
+    publisher: {
       type: String,
+      required: true,
     },
-    description: {
+    section: {
       type: String,
+      required: true,
     },
-    price: {
-      type: Number,
-    },
-    stock: {
-      type: Number,
-    },
-    coverImage: {
+    remarks: {
       type: String,
+      default: "",
+    },
+    academicYear: {
+      type: String,
+      default: "2024-2025",
     },
   },
   {
@@ -27,4 +41,5 @@ const BookSchema = new mongoose.Schema(
   }
 );
 
-export default mongoose.models.Book || mongoose.model("Book", BookSchema);
+const Book = mongoose.models.Book || mongoose.model("Book", BookSchema);
+export default Book;

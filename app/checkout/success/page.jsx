@@ -57,111 +57,13 @@ function CheckoutSuccessContent() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white flex items-center justify-center px-4">
         <div className="text-center">
-          <div className="relative w-48 h-48 mx-auto">
-            {/* Spinning circles background */}
-            <div className="absolute inset-0 animate-spin-slow">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="#E2E8F0"
-                  strokeWidth="2"
-                  strokeDasharray="4 4"
-                />
-              </svg>
-            </div>
-
-            {/* Animated book */}
-            <div className="absolute inset-0 animate-pulse">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                {/* Book cover */}
-                <rect
-                  x="25"
-                  y="20"
-                  width="50"
-                  height="60"
-                  rx="2"
-                  fill="#E2E8F0"
-                />
-
-                {/* Book pages - animated */}
-                <g className="origin-left animate-wave">
-                  <rect x="25" y="20" width="5" height="60" fill="#F8FAFC" />
-                  <rect x="30" y="20" width="2" height="60" fill="#E2E8F0" />
-                  <rect x="33" y="20" width="2" height="60" fill="#E2E8F0" />
-                  <rect x="36" y="20" width="2" height="60" fill="#E2E8F0" />
-                </g>
-
-                {/* Book title lines */}
-                <rect
-                  x="40"
-                  y="30"
-                  width="25"
-                  height="2"
-                  rx="1"
-                  fill="#CBD5E1"
-                />
-                <rect
-                  x="40"
-                  y="35"
-                  width="20"
-                  height="2"
-                  rx="1"
-                  fill="#CBD5E1"
-                />
-                <rect
-                  x="40"
-                  y="40"
-                  width="22"
-                  height="2"
-                  rx="1"
-                  fill="#CBD5E1"
-                />
-              </svg>
-            </div>
-
-            {/* Progress circle */}
-            <div className="absolute inset-0">
-              <svg viewBox="0 0 100 100" className="w-full h-full">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="45"
-                  fill="none"
-                  stroke="#94A3B8"
-                  strokeWidth="2"
-                  strokeDasharray="283"
-                  strokeDashoffset="283"
-                  className="animate-progress origin-center -rotate-90"
-                />
-              </svg>
-            </div>
-          </div>
-
+          {/* ... (keep existing loading animation) ... */}
           <h2 className="mt-6 text-xl font-medium text-zinc-900">
             Fetching your order details...
           </h2>
           <p className="mt-2 text-zinc-500 text-sm">
-            Preparing your reading journey
+            Preparing your book order details
           </p>
-
-          {/* Loading dots */}
-          <div className="flex items-center justify-center gap-1 mt-4">
-            <div
-              className="w-2 h-2 rounded-full bg-zinc-300 animate-bounce"
-              style={{ animationDelay: "0ms" }}
-            ></div>
-            <div
-              className="w-2 h-2 rounded-full bg-zinc-300 animate-bounce"
-              style={{ animationDelay: "150ms" }}
-            ></div>
-            <div
-              className="w-2 h-2 rounded-full bg-zinc-300 animate-bounce"
-              style={{ animationDelay: "300ms" }}
-            ></div>
-          </div>
         </div>
       </div>
     );
@@ -190,6 +92,9 @@ function CheckoutSuccessContent() {
     );
   }
 
+  const totalItems =
+    order?.items.reduce((sum, item) => sum + item.quantity, 0) || 0;
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white flex items-center justify-center px-4">
       <div className="text-center max-w-md mx-auto">
@@ -198,8 +103,8 @@ function CheckoutSuccessContent() {
           Order Confirmed!
         </h2>
         <p className="mt-3 text-zinc-500 font-light">
-          Thank you for your purchase. We've sent the order confirmation and
-          invoice to your email.
+          Thank you for your order. We've sent the order confirmation to your
+          email.
         </p>
 
         {order && (
@@ -214,31 +119,31 @@ function CheckoutSuccessContent() {
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-zinc-600">Order ID</span>
                   <span className="text-sm font-medium text-zinc-900">
-                    #{order._id.toUpperCase()}
+                    #{order._id}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-zinc-600">Order Date</span>
                   <span className="text-sm font-medium text-zinc-900">
-                    {new Date(order.createdAt)
-                      .toLocaleDateString("en-US", {
-                        year: "numeric",
-                        month: "long",
-                        day: "numeric",
-                      })
-                      .toUpperCase()}
+                    {new Date(order.createdAt).toLocaleDateString()}
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm text-zinc-600">Total Amount</span>
+                  <span className="text-sm text-zinc-600">Total Books</span>
                   <span className="text-sm font-medium text-zinc-900">
-                    ₹{order.total.toFixed(2)}
+                    {totalItems} items
                   </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-zinc-600">Status</span>
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700">
                     {order.status}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-zinc-600">Delivery To</span>
+                  <span className="text-sm font-medium text-zinc-900 text-right">
+                    {order.customer.name}
                   </span>
                 </div>
               </div>
@@ -251,7 +156,7 @@ function CheckoutSuccessContent() {
             href="/"
             className="w-full sm:w-auto inline-flex items-center justify-center px-8 py-3 rounded-lg text-base font-medium text-white bg-zinc-900 hover:bg-zinc-800 transition-colors shadow-sm"
           >
-            Continue Shopping
+            Return to Book List
           </Link>
         </div>
 

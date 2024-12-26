@@ -4,7 +4,6 @@ import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
 import Book from "@/models/Book";
 import { sendOrderConfirmation } from "@/lib/emailService";
-import { generateInvoice } from "@/lib/invoiceGenerator";
 
 export async function POST(request) {
   try {
@@ -12,7 +11,7 @@ export async function POST(request) {
     const data = await request.json();
     const { customer, shipping, items } = data;
 
-    // Validate stock and get current prices
+    // Fetch books to validate they exist and get their details
     const bookIds = items.map((item) => item.bookId);
     const books = await Book.find({ _id: { $in: bookIds } });
 
@@ -21,8 +20,7 @@ export async function POST(request) {
       return acc;
     }, {});
 
-    // Validate stock and calculate total
-    let total = 0;
+    // Prepare order items with book details
     const orderItems = [];
 
     for (const item of items) {
@@ -35,30 +33,15 @@ export async function POST(request) {
         );
       }
 
-      if (book.stock < item.quantity) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: `Insufficient stock for book: ${book.title}`,
-            availableStock: book.stock,
-          },
-          { status: 400 }
-        );
-      }
-
-      const itemTotal = book.price * item.quantity;
-      total += itemTotal;
-
       orderItems.push({
         bookId: book._id,
         quantity: item.quantity,
-        price: book.price,
         title: book.title,
-        author: book.author,
-      });
-
-      await Book.findByIdAndUpdate(book._id, {
-        $inc: { stock: -item.quantity },
+        subject: book.subject,
+        class: book.class,
+        section: book.section,
+        serialNumber: book.serialNumber,
+        publisher: book.publisher,
       });
     }
 
@@ -67,23 +50,19 @@ export async function POST(request) {
       customer,
       shipping,
       items: orderItems,
-      total,
       status: "pending",
+      academicYear: "2024-2025",
       createdAt: new Date(),
     });
 
-    // Generate invoice
-    const pdfBuffer = await generateInvoice(order);
-
-    // Send confirmation email with invoice
-    await sendOrderConfirmation(order, pdfBuffer);
+    // Send confirmation email
+    await sendOrderConfirmation(order);
 
     return NextResponse.json(
       {
         success: true,
         data: {
           orderId: order._id,
-          total: order.total,
         },
       },
       { status: 201 }

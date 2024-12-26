@@ -25,6 +25,15 @@ export function CartProvider({ children }) {
       (item) => item.id === book._id
     );
 
+    // If quantity is 0, remove the item
+    if (quantity === 0) {
+      if (existingItemIndex >= 0) {
+        currentItems.splice(existingItemIndex, 1);
+      }
+      updateCart(currentItems);
+      return;
+    }
+
     if (existingItemIndex >= 0) {
       currentItems[existingItemIndex] = {
         ...currentItems[existingItemIndex],
@@ -32,8 +41,13 @@ export function CartProvider({ children }) {
       };
     } else {
       currentItems.push({
-        ...book,
         id: book._id,
+        title: book.title,
+        subject: book.subject,
+        class: book.class,
+        section: book.section,
+        publisher: book.publisher,
+        serialNumber: book.serialNumber,
         quantity,
       });
     }
@@ -51,14 +65,7 @@ export function CartProvider({ children }) {
   };
 
   const getCartItemCount = () => {
-    return cartItems.length;
-  };
-
-  const getCartTotal = () => {
-    return cartItems.reduce(
-      (total, item) => total + item.price * item.quantity,
-      0
-    );
+    return cartItems.reduce((total, item) => total + item.quantity, 0);
   };
 
   return (
@@ -69,7 +76,6 @@ export function CartProvider({ children }) {
         removeFromCart,
         clearCart,
         getCartItemCount,
-        getCartTotal,
       }}
     >
       {children}

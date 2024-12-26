@@ -11,7 +11,6 @@ import {
   Search,
 } from "lucide-react";
 import * as XLSX from "xlsx";
-import Image from "next/image";
 
 export default function AdminBooks() {
   const [books, setBooks] = useState([]);
@@ -21,12 +20,14 @@ export default function AdminBooks() {
   const [editingBook, setEditingBook] = useState(null);
   const fileInputRef = useRef(null);
   const [newBook, setNewBook] = useState({
+    serialNumber: "",
+    class: "",
+    subject: "",
     title: "",
-    author: "",
-    price: "",
-    description: "",
-    coverImage: "",
-    stock: "",
+    publisher: "",
+    section: "",
+    remarks: "",
+    academicYear: "2024-2025",
   });
 
   useEffect(() => {
@@ -48,34 +49,54 @@ export default function AdminBooks() {
   const filteredBooks = books.filter(
     (book) =>
       book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchQuery.toLowerCase())
+      book.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      book.publisher.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const handleAddBook = async (e) => {
     e.preventDefault();
     try {
+      // Format the data before sending
+      const bookData = {
+        ...newBook,
+        serialNumber: Number(newBook.serialNumber),
+        class: Number(newBook.class),
+      };
+
+      // Log the data being sent
+      console.log("Sending book data:", bookData);
+
       const response = await fetch("/api/books", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(newBook),
+        body: JSON.stringify(bookData),
       });
+
       const data = await response.json();
+      console.log("Response:", data);
+
       if (data.success) {
         setBooks([data.data, ...books]);
         setShowAddModal(false);
         setNewBook({
+          serialNumber: "",
+          class: "",
+          subject: "",
           title: "",
-          author: "",
-          price: "",
-          description: "",
-          coverImage: "",
-          stock: "",
+          publisher: "",
+          section: "",
+          remarks: "",
+          academicYear: "2024-2025",
         });
+      } else {
+        // Show error message
+        alert(data.error || "Failed to add book");
       }
     } catch (error) {
       console.error("Error adding book:", error);
+      alert("Failed to add book");
     }
   };
 
@@ -123,7 +144,6 @@ export default function AdminBooks() {
     }
   };
 
-  // Handle Excel Import
   const handleFileUpload = async (event) => {
     const file = event.target.files[0];
     if (file) {
@@ -132,21 +152,33 @@ export default function AdminBooks() {
         reader.onload = async (e) => {
           const data = new Uint8Array(e.target.result);
           const workbook = XLSX.read(data, { type: "array" });
-          const sheetName = workbook.SheetNames[0];
-          const worksheet = workbook.Sheets[sheetName];
-          const jsonData = XLSX.utils.sheet_to_json(worksheet);
+          const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+          const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-          // Validate and format the data
-          const formattedData = jsonData.map((row) => ({
-            title: row.title || "",
-            author: row.author || "",
-            price: parseFloat(row.price) || 0,
-            description: row.description || "",
-            stock: parseInt(row.stock) || 0,
-          }));
+          // Skip header row and process data
+          const processedData = [];
+          for (let i = 2; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            if (row.length === 0 || !row[0]) continue;
+
+            const book = {
+              serialNumber: row[0],
+              class: row[1],
+              subject: row[2] || "",
+              title: row[3] || "",
+              publisher: row[4] || "",
+              section: row[5] || "",
+              remarks: row[6] || "",
+              academicYear: "2024-2025",
+            };
+
+            if (book.title && book.class) {
+              processedData.push(book);
+            }
+          }
 
           // Upload all books
-          for (const book of formattedData) {
+          for (const book of processedData) {
             try {
               const response = await fetch("/api/books", {
                 method: "POST",
@@ -164,7 +196,6 @@ export default function AdminBooks() {
             }
           }
 
-          // Refresh the books list
           fetchBooks();
           alert("Books imported successfully!");
         };
@@ -176,32 +207,6 @@ export default function AdminBooks() {
     }
   };
 
-  // Handle Excel/CSV Export
-  const handleExport = (format = "xlsx") => {
-    // Prepare the data for export
-    const exportData = books.map((book) => ({
-      title: book.title,
-      author: book.author,
-      price: book.price,
-      description: book.description,
-      stock: book.stock,
-    }));
-
-    // Create workbook and worksheet
-    const wb = XLSX.utils.book_new();
-    const ws = XLSX.utils.json_to_sheet(exportData);
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(wb, ws, "Books");
-
-    // Generate and download file
-    if (format === "xlsx") {
-      XLSX.writeFile(wb, "books.xlsx");
-    } else {
-      XLSX.writeFile(wb, "books.csv");
-    }
-  };
-
   return (
     <div className="min-h-screen bg-zinc-50">
       <header className="bg-white border-b border-zinc-200">
@@ -210,7 +215,7 @@ export default function AdminBooks() {
             <div className="flex items-center gap-3">
               <Book className="w-8 h-8 text-zinc-800" strokeWidth={1.5} />
               <h1 className="text-2xl font-medium text-zinc-900">
-                Books Management
+                DH Syllabus Books Management
               </h1>
             </div>
             <div className="flex items-center gap-3">
@@ -228,26 +233,6 @@ export default function AdminBooks() {
                 <Upload className="w-5 h-5" />
                 Import Excel
               </button>
-              <div className="relative group">
-                <button className="flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-800 rounded-lg hover:bg-zinc-200 transition-colors">
-                  <Download className="w-5 h-5" />
-                  Export
-                </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                  <button
-                    onClick={() => handleExport("xlsx")}
-                    className="w-full px-4 py-2 text-left hover:bg-zinc-50 rounded-t-lg"
-                  >
-                    Export as Excel
-                  </button>
-                  <button
-                    onClick={() => handleExport("csv")}
-                    className="w-full px-4 py-2 text-left hover:bg-zinc-50 rounded-b-lg"
-                  >
-                    Export as CSV
-                  </button>
-                </div>
-              </div>
               <button
                 onClick={() => setShowAddModal(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors"
@@ -258,26 +243,16 @@ export default function AdminBooks() {
             </div>
           </div>
 
-          {/* Search Bar */}
-          <div className="mt-6 max-w-md flex justify-between">
+          <div className="mt-6 max-w-md">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
               <input
                 type="text"
-                placeholder="Search books by title or author..."
+                placeholder="Search books..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
               />
-            </div>
-            {/* route to orders */}
-            <div className="flex items-center">
-              <button
-                onClick={() => (window.location.href = "/admin/orders")}
-                className="flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors"
-              >
-                Orders
-              </button>
             </div>
           </div>
         </div>
@@ -286,17 +261,20 @@ export default function AdminBooks() {
       <main className="max-w-7xl mx-auto px-6 py-8">
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="grid grid-cols-12 gap-6 p-6 bg-zinc-50 border-b border-zinc-200">
-            <div className="col-span-3 text-sm font-medium text-zinc-500">
+            <div className="col-span-1 text-sm font-medium text-zinc-500">
+              No.
+            </div>
+            <div className="col-span-1 text-sm font-medium text-zinc-500">
+              Class
+            </div>
+            <div className="col-span-2 text-sm font-medium text-zinc-500">
+              Subject
+            </div>
+            <div className="col-span-4 text-sm font-medium text-zinc-500">
               Book Details
             </div>
-            <div className="col-span-3 text-sm font-medium text-zinc-500">
-              Description
-            </div>
             <div className="col-span-2 text-sm font-medium text-zinc-500">
-              Price
-            </div>
-            <div className="col-span-2 text-sm font-medium text-zinc-500">
-              Stock
+              Section
             </div>
             <div className="col-span-2 text-sm font-medium text-zinc-500 text-right">
               Actions
@@ -309,26 +287,28 @@ export default function AdminBooks() {
                 key={book._id}
                 className="grid grid-cols-12 gap-6 p-6 items-center"
               >
-                <div className="col-span-3">
+                <div className="col-span-1">
+                  <span className="text-sm text-zinc-900">
+                    {book.serialNumber}
+                  </span>
+                </div>
+                <div className="col-span-1">
+                  <span className="text-sm text-zinc-900">{book.class}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-sm text-zinc-900">{book.subject}</span>
+                </div>
+                <div className="col-span-4">
                   <h3 className="text-sm font-medium text-zinc-900 mb-1">
                     {book.title}
                   </h3>
-                  <p className="text-sm text-zinc-500">{book.author}</p>
-                </div>
-                <div className="col-span-3">
-                  <p className="text-sm text-zinc-600 line-clamp-2">
-                    {book.description}
-                  </p>
+                  <p className="text-sm text-zinc-500">{book.publisher}</p>
+                  {book.remarks && (
+                    <p className="text-xs text-zinc-400 mt-1">{book.remarks}</p>
+                  )}
                 </div>
                 <div className="col-span-2">
-                  <span className="text-sm text-zinc-900">
-                    ₹{book.price.toFixed(2)}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-sm text-zinc-900">
-                    {book.stock} units
-                  </span>
+                  <span className="text-sm text-zinc-900">{book.section}</span>
                 </div>
                 <div className="col-span-2 flex items-center justify-end gap-2">
                   <button
@@ -348,13 +328,6 @@ export default function AdminBooks() {
                 </div>
               </div>
             ))}
-            {filteredBooks.length === 0 && (
-              <div className="p-8 text-center text-zinc-500">
-                {searchQuery
-                  ? "No books match your search."
-                  : "No books added yet. Click 'Add New Book' to get started."}
-              </div>
-            )}
           </div>
         </div>
       </main>
@@ -378,6 +351,54 @@ export default function AdminBooks() {
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Serial Number
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={newBook.serialNumber}
+                    onChange={(e) =>
+                      setNewBook({
+                        ...newBook,
+                        serialNumber: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Class
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={newBook.class}
+                    onChange={(e) =>
+                      setNewBook({
+                        ...newBook,
+                        class: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={newBook.subject}
+                    onChange={(e) =>
+                      setNewBook({ ...newBook, subject: e.target.value })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
                     Title
                   </label>
                   <input
@@ -392,60 +413,42 @@ export default function AdminBooks() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Author
+                    Publisher
                   </label>
                   <input
                     type="text"
                     required
-                    value={newBook.author}
+                    value={newBook.publisher}
                     onChange={(e) =>
-                      setNewBook({ ...newBook, author: e.target.value })
+                      setNewBook({ ...newBook, publisher: e.target.value })
                     }
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Price (₹)
+                    Section
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     required
-                    min="0"
-                    step="0.01"
-                    value={newBook.price}
+                    value={newBook.section}
                     onChange={(e) =>
-                      setNewBook({ ...newBook, price: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Stock
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={newBook.stock}
-                    onChange={(e) =>
-                      setNewBook({ ...newBook, stock: e.target.value })
+                      setNewBook({ ...newBook, section: e.target.value })
                     }
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Description
+                    Remarks
                   </label>
                   <textarea
-                    required
-                    value={newBook.description}
+                    value={newBook.remarks}
                     onChange={(e) =>
-                      setNewBook({ ...newBook, description: e.target.value })
+                      setNewBook({ ...newBook, remarks: e.target.value })
                     }
-                    rows={4}
+                    rows={3}
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   />
                 </div>
@@ -487,6 +490,57 @@ export default function AdminBooks() {
               <div className="grid grid-cols-2 gap-6">
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Serial Number
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={editingBook.serialNumber}
+                    onChange={(e) =>
+                      setEditingBook({
+                        ...editingBook,
+                        serialNumber: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Class
+                  </label>
+                  <input
+                    type="number"
+                    required
+                    value={editingBook.class}
+                    onChange={(e) =>
+                      setEditingBook({
+                        ...editingBook,
+                        class: parseInt(e.target.value),
+                      })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
+                    Subject
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingBook.subject}
+                    onChange={(e) =>
+                      setEditingBook({
+                        ...editingBook,
+                        subject: e.target.value,
+                      })
+                    }
+                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 mb-2">
                     Title
                   </label>
                   <input
@@ -501,63 +555,51 @@ export default function AdminBooks() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Author
+                    Publisher
                   </label>
                   <input
                     type="text"
                     required
-                    value={editingBook.author}
+                    value={editingBook.publisher}
                     onChange={(e) =>
-                      setEditingBook({ ...editingBook, author: e.target.value })
+                      setEditingBook({
+                        ...editingBook,
+                        publisher: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Price (₹)
+                    Section
                   </label>
                   <input
-                    type="number"
+                    type="text"
                     required
-                    min="0"
-                    step="0.01"
-                    value={editingBook.price}
+                    value={editingBook.section}
                     onChange={(e) =>
-                      setEditingBook({ ...editingBook, price: e.target.value })
-                    }
-                    className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Stock
-                  </label>
-                  <input
-                    type="number"
-                    required
-                    min="0"
-                    value={editingBook.stock}
-                    onChange={(e) =>
-                      setEditingBook({ ...editingBook, stock: e.target.value })
+                      setEditingBook({
+                        ...editingBook,
+                        section: e.target.value,
+                      })
                     }
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   />
                 </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Description
+                    Remarks
                   </label>
                   <textarea
-                    required
-                    value={editingBook.description}
+                    value={editingBook.remarks}
                     onChange={(e) =>
                       setEditingBook({
                         ...editingBook,
-                        description: e.target.value,
+                        remarks: e.target.value,
                       })
                     }
-                    rows={4}
+                    rows={3}
                     className="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
                   />
                 </div>
