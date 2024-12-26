@@ -15,7 +15,7 @@ export default function BookCard({ book }) {
   }, [book._id, cartItems]);
 
   const handleQuantityChange = (value) => {
-    const newValue = Math.max(0, Math.min(99, value));
+    const newValue = Math.max(0, value);
     setSelectedQuantity(newValue);
     addToCart(book, newValue);
   };
@@ -26,7 +26,9 @@ export default function BookCard({ book }) {
         <div className="flex flex-col md:grid md:grid-cols-12 items-start md:items-center gap-3 md:gap-6 p-4 md:p-6 relative">
           {/* Serial Number and Class */}
           <div className="col-span-2">
-            <span className="text-sm text-zinc-500 block">No. {book.serialNumber}</span>
+            <span className="text-sm text-zinc-500 block">
+              No. {book.serialNumber}
+            </span>
             <span className="text-sm text-zinc-900">Class {book.class}</span>
           </div>
 
@@ -38,7 +40,7 @@ export default function BookCard({ book }) {
             <p className="text-sm text-zinc-500 mb-1">{book.subject}</p>
             <p className="text-xs text-zinc-400">{book.publisher}</p>
           </div>
-          
+
           {/* Section */}
           <div className="md:col-span-2">
             <span className="text-sm text-zinc-600">{book.section}</span>
@@ -54,7 +56,10 @@ export default function BookCard({ book }) {
               className="p-2 rounded-full hover:bg-zinc-100 transition-all duration-200"
               title="View Details"
             >
-              <ChevronDown className="w-5 h-5 text-zinc-600" strokeWidth={1.5} />
+              <ChevronDown
+                className="w-5 h-5 text-zinc-600"
+                strokeWidth={1.5}
+              />
             </button>
             <div className="flex items-center gap-3">
               <div className="flex items-center border rounded-lg overflow-hidden shadow-sm">
@@ -67,7 +72,6 @@ export default function BookCard({ book }) {
                 <input
                   type="number"
                   min="0"
-                  max={99}
                   value={selectedQuantity}
                   onChange={(e) =>
                     handleQuantityChange(parseInt(e.target.value) || 0)
@@ -118,7 +122,7 @@ export default function BookCard({ book }) {
                   Note: {book.remarks}
                 </p>
               )}
-              
+
               <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
                 <div className="flex items-center border rounded-lg overflow-hidden shadow-sm">
                   <button
@@ -130,7 +134,6 @@ export default function BookCard({ book }) {
                   <input
                     type="number"
                     min="0"
-                    max={99}
                     value={selectedQuantity}
                     onChange={(e) =>
                       handleQuantityChange(parseInt(e.target.value) || 0)
