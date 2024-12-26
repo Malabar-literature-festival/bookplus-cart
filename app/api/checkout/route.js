@@ -4,6 +4,7 @@ import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
 import Book from "@/models/Book";
 import { sendOrderConfirmation } from "@/lib/emailService";
+import { generateInvoice } from "@/lib/invoiceGenerator";
 
 export async function POST(request) {
   try {
@@ -55,8 +56,11 @@ export async function POST(request) {
       createdAt: new Date(),
     });
 
-    // Send confirmation email
-    await sendOrderConfirmation(order);
+    // Generate invoice PDF
+    const pdfBuffer = await generateInvoice(order);
+
+    // Send confirmation email with PDF
+    await sendOrderConfirmation(order, pdfBuffer);
 
     return NextResponse.json(
       {
