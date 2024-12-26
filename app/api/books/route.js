@@ -6,7 +6,7 @@ import Book from "@/models/Book";
 export async function GET() {
   try {
     await connectDB();
-    const books = await Book.find({}).sort({ createdAt: -1 });
+    const books = await Book.find({});
     return NextResponse.json({ success: true, data: books });
   } catch (error) {
     return NextResponse.json(
