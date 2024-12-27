@@ -6,7 +6,7 @@ COPY package*.json .
 RUN npm install
 COPY . .
 
-RUN next build
+RUN npm run build
 FROM node:18.20.5-alpine AS master
 
 WORKDIR /app
@@ -17,4 +17,4 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 
-CMD ["next", "start"]
+CMD ["npm", "run","start"]
