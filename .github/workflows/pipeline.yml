@@ -40,7 +40,11 @@ jobs:
         with:
           push: true
           tags: ${{ secrets.AZURE_CONTAINER_REGISTRY }}/bookplus-cart:latest, ${{ secrets.AZURE_CONTAINER_REGISTRY }}/bookplus-cart:${{ steps.vars.outputs.sha_short }}
-      # step 5: depolyment
-      - name: Trigger deployment endpoint
-        run: |
-          curl -X POST http://20.235.203.243/ -H "Content-Type: application/json" -d '{"dir": "bookplus-cart"}'
+      # step 5: deploy to container
+      - name: deploy to Container App
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          acrName: datahexrepository
+          containerAppName: ${{secrets.CONTAINER_APP}}
+          resourceGroup: ${{secrets.RESOURCE_GROUP}}
+          imageToDeploy: ${{ secrets.AZURE_CONTAINER_REGISTRY }}/bookplus-cart:${{ steps.vars.outputs.sha_short }}
