@@ -11,21 +11,15 @@ const OrderSchema = new mongoose.Schema({
       type: String,
       required: true,
     },
-    phone: {
+    institution: {
       type: String,
       required: true,
     },
-  },
-  shipping: {
-    address: {
+    mobileNumber: {
       type: String,
       required: true,
     },
-    city: {
-      type: String,
-      required: true,
-    },
-    postalCode: {
+    whatsappNumber: {
       type: String,
       required: true,
     },

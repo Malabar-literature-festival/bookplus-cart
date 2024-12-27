@@ -1,23 +1,23 @@
+// CheckoutPage.js
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ShoppingBag, AlertCircle, X } from "lucide-react";
 import { ProcessingLoader } from "@/components/LoadingAnimations";
-import { useCart } from "@/context/CartContext"; // Import useCart
+import { useCart } from "@/context/CartContext";
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { cartItems, removeFromCart } = useCart(); // Use cart context
+  const { cartItems, removeFromCart } = useCart();
   const [loading, setLoading] = useState(false);
   const [processingStep, setProcessingStep] = useState(0);
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     email: "",
-    phone: "",
-    address: "",
-    city: "",
-    postalCode: "",
+    institution: "",
+    mobileNumber: "",
+    whatsappNumber: "",
   });
 
   useEffect(() => {
@@ -27,9 +27,8 @@ export default function CheckoutPage() {
   }, [cartItems, router]);
 
   const removeItem = (itemId) => {
-    removeFromCart(itemId); // Use context method instead of local storage
-
-    if (cartItems.length <= 1) { // Check if this was the last item
+    removeFromCart(itemId);
+    if (cartItems.length <= 1) {
       router.push("/");
     }
   };
@@ -41,31 +40,9 @@ export default function CheckoutPage() {
     setProcessingStep(0);
 
     try {
-      // Cart validation
       setProcessingStep(1);
-      // const validateResponse = await fetch("/api/cart/validate", {
-      //   method: "POST",
-      //   headers: {
-      //     "Content-Type": "application/json",
-      //   },
-      //   body: JSON.stringify({ items: cartItems }),
-      // });
-
-      // const validationData = await validateResponse.json();
-
-      // if (!validationData.success) {
-      //   throw new Error(validationData.error);
-      // }
-
-      // // Check invalid items
-      // const invalidItems = validationData.data.filter((item) => !item.valid);
-      // if (invalidItems.length > 0) {
-      //   const errorMessages = invalidItems.map((item) => item.error);
-      //   throw new Error(`Validation failed: ${errorMessages.join(", ")}`);
-      // }
-
-      // Process checkout
       setProcessingStep(2);
+
       const response = await fetch("/api/checkout", {
         method: "POST",
         headers: {
@@ -75,12 +52,9 @@ export default function CheckoutPage() {
           customer: {
             name: formData.name,
             email: formData.email,
-            phone: formData.phone,
-          },
-          shipping: {
-            address: formData.address,
-            city: formData.city,
-            postalCode: formData.postalCode,
+            institution: formData.institution,
+            mobileNumber: formData.mobileNumber,
+            whatsappNumber: formData.whatsappNumber,
           },
           items: cartItems.map((item) => ({
             bookId: item.id,
@@ -95,11 +69,9 @@ export default function CheckoutPage() {
         throw new Error(data.error);
       }
 
-      // Show processing state for 1.5 seconds
       setProcessingStep(3);
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
-      // Navigate to success page
       const successUrl = `/checkout/success?orderId=${data.data.orderId}`;
       router.push(successUrl);
     } catch (error) {
@@ -148,7 +120,7 @@ export default function CheckoutPage() {
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Full Name
+                  Name of Teacher
                 </label>
                 <input
                   type="text"
@@ -157,7 +129,7 @@ export default function CheckoutPage() {
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-2 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 transition-shadow"
-                  placeholder="Enter your full name"
+                  placeholder="Enter Name of Teacher"
                 />
               </div>
 
@@ -178,73 +150,47 @@ export default function CheckoutPage() {
 
               <div>
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Phone
-                </label>
-                <input
-                  type="tel"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-2 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 transition-shadow"
-                  placeholder="Enter your phone number"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Shipping Address Section */}
-          <div className="bg-white rounded-xl shadow-sm border border-zinc-100 p-6">
-            <h2 className="text-xl font-medium text-zinc-900 mb-6">
-              Shipping Address
-            </h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Street Address
+                  Name of Institution
                 </label>
                 <input
                   type="text"
-                  name="address"
-                  value={formData.address}
+                  name="institution"
+                  value={formData.institution}
                   onChange={handleChange}
                   required
                   className="w-full px-4 py-2 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 transition-shadow"
-                  placeholder="Enter your street address"
+                  placeholder="Enter institution name"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    City
-                  </label>
-                  <input
-                    type="text"
-                    name="city"
-                    value={formData.city}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-2 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 transition-shadow"
-                    placeholder="Enter your city"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Mobile Number
+                </label>
+                <input
+                  type="tel"
+                  name="mobileNumber"
+                  value={formData.mobileNumber}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 transition-shadow"
+                  placeholder="Enter mobile number"
+                />
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-zinc-700 mb-2">
-                    Postal Code
-                  </label>
-                  <input
-                    type="text"
-                    name="postalCode"
-                    value={formData.postalCode}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-4 py-2 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 transition-shadow"
-                    placeholder="Enter postal code"
-                  />
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  WhatsApp Number
+                </label>
+                <input
+                  type="tel"
+                  name="whatsappNumber"
+                  value={formData.whatsappNumber}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-2 rounded-lg border border-zinc-200 focus:outline-none focus:ring-2 focus:ring-zinc-200 transition-shadow"
+                  placeholder="Enter WhatsApp number"
+                />
               </div>
             </div>
           </div>

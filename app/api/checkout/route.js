@@ -1,4 +1,4 @@
-// app/api/checkout/route.js
+// api/checkout/route.js
 import { NextResponse } from "next/server";
 import connectDB from "@/lib/mongodb";
 import Order from "@/models/Order";
@@ -10,9 +10,8 @@ export async function POST(request) {
   try {
     await connectDB();
     const data = await request.json();
-    const { customer, shipping, items } = data;
+    const { customer, items } = data;
 
-    // Fetch books to validate they exist and get their details
     const bookIds = items.map((item) => item.bookId);
     const books = await Book.find({ _id: { $in: bookIds } });
 
@@ -21,7 +20,6 @@ export async function POST(request) {
       return acc;
     }, {});
 
-    // Prepare order items with book details
     const orderItems = [];
 
     for (const item of items) {
@@ -46,20 +44,15 @@ export async function POST(request) {
       });
     }
 
-    // Create the order
     const order = await Order.create({
       customer,
-      shipping,
       items: orderItems,
       status: "pending",
       academicYear: "2024-2025",
       createdAt: new Date(),
     });
 
-    // Generate invoice PDF
     const pdfBuffer = await generateInvoice(order);
-
-    // Send confirmation email with PDF
     await sendOrderConfirmation(order, pdfBuffer);
 
     return NextResponse.json(

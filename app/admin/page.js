@@ -11,6 +11,7 @@ import {
   Search,
 } from "lucide-react";
 import * as XLSX from "xlsx";
+import Link from "next/link";
 
 export default function AdminBooks() {
   const [books, setBooks] = useState([]);
@@ -253,6 +254,9 @@ export default function AdminBooks() {
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
               />
+            </div>
+            <div>
+              <Link href="/admin/orders">Order</Link>
             </div>
           </div>
         </div>

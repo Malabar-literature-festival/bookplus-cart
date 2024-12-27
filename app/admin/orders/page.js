@@ -10,6 +10,7 @@ import {
   Truck,
   XCircle,
   AlertCircle,
+  School,
 } from "lucide-react";
 
 const ORDER_STATUS = {
@@ -98,7 +99,10 @@ export default function AdminOrders() {
     const matchesSearch =
       order._id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.customer.email.toLowerCase().includes(searchQuery.toLowerCase());
+      order.customer.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.customer.institution
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase());
 
     const matchesStatus =
       statusFilter === "all" || order.status === statusFilter;
@@ -138,7 +142,7 @@ export default function AdminOrders() {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-zinc-400" />
               <input
                 type="text"
-                placeholder="Search orders by ID, customer name, or email..."
+                placeholder="Search by ID, name, email, or institution..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
@@ -184,6 +188,9 @@ export default function AdminOrders() {
                     </div>
 
                     <div className="flex items-center gap-4">
+                      <div className="text-sm text-zinc-600">
+                        Academic Year: {order.academicYear}
+                      </div>
                       <StatusBadge status={order.status} />
                       <button
                         onClick={() => setShowOrderDetails(order)}
@@ -209,11 +216,16 @@ export default function AdminOrders() {
       {/* Order Details Modal */}
       {showOrderDetails && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-          <div className="bg-white w-full max-w-3xl rounded-2xl shadow-xl">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl">
             <div className="flex items-center justify-between p-6 border-b border-zinc-200">
-              <h2 className="text-xl font-medium text-zinc-900">
-                Order Details
-              </h2>
+              <div>
+                <h2 className="text-xl font-medium text-zinc-900">
+                  Order Details
+                </h2>
+                <p className="text-sm text-zinc-500 mt-1">
+                  Academic Year: {showOrderDetails.academicYear}
+                </p>
+              </div>
               <button
                 onClick={() => setShowOrderDetails(null)}
                 className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
@@ -228,21 +240,23 @@ export default function AdminOrders() {
                   <h3 className="text-sm font-medium text-zinc-900 mb-2">
                     Customer Information
                   </h3>
-                  <div className="text-sm text-zinc-600">
+                  <div className="text-sm text-zinc-600 space-y-1">
                     <p>{showOrderDetails.customer.name}</p>
                     <p>{showOrderDetails.customer.email}</p>
-                    <p>{showOrderDetails.customer.phone}</p>
+                    <p>Mobile: {showOrderDetails.customer.mobileNumber}</p>
+                    <p>WhatsApp: {showOrderDetails.customer.whatsappNumber}</p>
                   </div>
                 </div>
 
                 <div>
                   <h3 className="text-sm font-medium text-zinc-900 mb-2">
-                    Shipping Address
+                    Institution Details
                   </h3>
                   <div className="text-sm text-zinc-600">
-                    <p>{showOrderDetails.shipping.address}</p>
-                    <p>{showOrderDetails.shipping.city}</p>
-                    <p>{showOrderDetails.shipping.postalCode}</p>
+                    <div className="flex items-center gap-2">
+                      <School className="w-4 h-4" />
+                      <p>{showOrderDetails.customer.institution}</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -255,35 +269,32 @@ export default function AdminOrders() {
                   {showOrderDetails.items.map((item) => (
                     <div
                       key={item.bookId}
-                      className="flex justify-between text-sm"
+                      className="grid grid-cols-2 gap-4 p-4 bg-zinc-50 rounded-lg"
                     >
                       <div>
                         <p className="font-medium text-zinc-900">
                           {item.title}
                         </p>
-                        <p className="text-zinc-500">{item.author}</p>
+                        <p className="text-sm text-zinc-600">
+                          Class {item.class} - {item.section}
+                        </p>
+                        <p className="text-sm text-zinc-600">
+                          Subject: {item.subject}
+                        </p>
                       </div>
                       <div className="text-right">
-                        <p className="text-zinc-900">
-                          ₹{item.price.toFixed(2)} × {item.quantity}
+                        <p className="text-sm text-zinc-600">
+                          Publisher: {item.publisher}
+                        </p>
+                        <p className="text-sm text-zinc-600">
+                          Serial #: {item.serialNumber}
                         </p>
                         <p className="font-medium text-zinc-900">
-                          ₹{(item.price * item.quantity).toFixed(2)}
+                          Quantity: {item.quantity}
                         </p>
                       </div>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              <div className="border-t border-zinc-200 mt-6 pt-6">
-                <div className="flex justify-between items-center">
-                  <span className="text-base font-medium text-zinc-900">
-                    Total
-                  </span>
-                  <span className="text-xl font-medium text-zinc-900">
-                    ₹{showOrderDetails.total.toFixed(2)}
-                  </span>
                 </div>
               </div>
 
