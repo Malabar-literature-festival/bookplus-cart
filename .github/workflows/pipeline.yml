@@ -1,26 +1,42 @@
-name: Azure Static Web Apps CI/CD
-
+name: bookplus-cart
+#trigger branch
 on:
   push:
     branches:
       - main
 
+permissions:
+  id-token: write #Require write permission to Fetch an OIDC token.
+  contents: read
+
 jobs:
-  build_and_deploy_job:
+  build-and-push:
     runs-on: ubuntu-latest
-    name: Build and Deploy Job
+
     steps:
-      - name: Checkout branch
-        uses: actions/checkout@v3
-      - name: Build And Deploy
-        id: builddeploy
-        uses: Azure/static-web-apps-deploy@v1
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v4
+      # step 2: login into azure using powershell
+      - name: Login via Az module
+        uses: azure/login@v2
         with:
-          azure_static_web_apps_api_token: ${{ secrets.AZURE_STATIC_WEB_APPS_API_TOKEN }}
-          repo_token: ${{ secrets.ACTIONS_TOKEN }} # Used for Github integrations (i.e. PR comments)
-          action: "upload"
-          ###### Repository/Build Configurations - These values can be configured to match your app requirements. ######
-          # For more information regarding Static Web App workflow configurations, please visit: https://aka.ms/swaworkflowconfig
-          app_location: "/" # App source code path
-          output_location: ".next" # Built app content directory - optional
-          ###### End of Repository/Build Configurations ######
+          creds: ${{secrets.AZURE_CREDENTIALS}}
+          enable-AzPSSession: true
+      # step 3: docker login
+      - name: docker login
+        uses: azure/powershell@v2
+        with:
+          azPSVersion: "latest"
+          inlineScript: |
+            Connect-AzContainerRegistry -Name datahexrepository
+      # set short sha
+      - name: Set outputs
+        id: vars
+        run: echo "sha_short=$(git rev-parse --short HEAD)" >> $GITHUB_OUTPUT
+      # step 4: docker build and push
+      - name: docker build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: ${{ secrets.AZURE_CONTAINER_REGISTRY }}/bookplus-cart:latest, ${{ secrets.AZURE_CONTAINER_REGISTRY }}/bookplus-cart:${{ steps.vars.outputs.sha_short }}
