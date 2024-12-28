@@ -24,9 +24,13 @@ RUN apk add --no-cache \
     nodejs \
     yarn
 
-# Set environment variables for Chromium
+# Set environment variables
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
-    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+    PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser \
+    NODE_ENV=production
+
+# Set higher memory limits for Node.js
+ENV NODE_OPTIONS="--max-old-space-size=4096"
 
 WORKDIR /app
 
@@ -39,7 +43,8 @@ COPY --from=builder /app/node_modules ./node_modules
 # Add user for security
 RUN addgroup -S appuser && \
     adduser -S -G appuser appuser && \
-    chown -R appuser:appuser /app
+    mkdir -p /tmp/chrome && \
+    chown -R appuser:appuser /app /tmp/chrome
 
 USER appuser
 
