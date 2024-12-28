@@ -4,6 +4,7 @@ import { Book, Search, ShoppingBag, Trash2 } from "lucide-react";
 import BookCard from "@/components/BookCard";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/context/CartContext";
+import Image from "next/image";
 
 export default function Home() {
   const router = useRouter();
@@ -41,7 +42,6 @@ export default function Home() {
     router.push("/checkout");
   };
 
-  // Get unique classes and subjects for filters
   const classes = [...new Set(books.map((book) => book.class))].sort(
     (a, b) => a - b
   );
@@ -62,16 +62,67 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-zinc-50 to-white pb-24 mt-16">
-      {/* Academic Year Banner */}
-      {/* <div className="bg-zinc-900 text-white py-2 text-center text-sm">
-        <span className="font-medium">Academic Year 2024-2025</span>
-      </div> */}
-
       <header className="pt-8 pb-2 px-4">
         <div className="max-w-6xl mx-auto">
-          {/* <h1 className="text-2xl font-medium text-zinc-900 mb-6 text-center">
-            DH Islamic University Book List
-          </h1> */}
+          {/* Instructions Section */}
+          <div className="mb-6 bg-white rounded-xl shadow-sm border border-zinc-100 overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-center gap-4 mb-3">
+                <div className="relative w-16 h-16 flex-shrink-0">
+                  <Image
+                    src="/bookplus.png"
+                    alt="Book Plus"
+                    className="object-contain"
+                    width={64}
+                    height={64}
+                  />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold text-zinc-900">
+                    SYLLABUS BOOKS ORDER FORM
+                  </h1>
+                  <h2 className="text-sm text-red-600">
+                    Instructions for Filling Out the Syllabus Books Form:-
+                  </h2>
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-3 gap-4 text-sm">
+                <div>
+                  <h3 className="font-medium text-zinc-900 mb-1">
+                    Ensure Accuracy:
+                  </h3>
+                  <ul className="space-y-1 text-zinc-600">
+                    <li>-- Quantity: Total number of books required</li>
+                    <li>-- Section: Class, grade, or section</li>
+                    <li>-- Institution: Full name of institution</li>
+                    <li>-- Person: Staff/student in charge</li>
+                  </ul>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-zinc-900 mb-1">
+                    Order Confirmation:
+                  </h3>
+                  <p className="text-zinc-600">
+                    You will receive the order list as a PDF in your registered
+                    email.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className="font-medium text-zinc-900 mb-1">
+                    Suggestions and Updates:
+                  </h3>
+                  <p className="text-zinc-600">
+                    Contact web admin directly for changes or suggestions.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Search and Filters */}
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4 mb-6">
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
@@ -163,7 +214,6 @@ export default function Home() {
         <div className="fixed bottom-0 inset-x-0 p-4 z-40">
           <div className="max-w-6xl mx-auto">
             <div className="flex items-center justify-end gap-3">
-              {/* Desktop view */}
               <div className="flex items-center gap-3">
                 <button
                   onClick={() => clearCart()}
