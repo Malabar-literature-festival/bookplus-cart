@@ -1,7 +1,7 @@
 FROM node:18.20.5-alpine AS builder
 
 # Install Chromium in builder stage  
-RUN apk add --no-cache chromium  
+RUN apk add --no-cache chromium chromium-chromedriver 
 
 WORKDIR /app
 COPY package*.json .
