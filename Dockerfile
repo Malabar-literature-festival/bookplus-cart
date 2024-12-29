@@ -4,7 +4,6 @@ WORKDIR /app
 COPY package*.json .
 
 RUN npm install
-RUN npm i puppeteer-core
 COPY . .
 
 RUN npm run build
