@@ -4,7 +4,7 @@ WORKDIR /app
 COPY package*.json .
 
 RUN npm install
-RUN npm i puppeteer-core
+RUN npm i puppeteer-core @sparticuz/chromium  
 COPY . .
 
 RUN npm run build
@@ -21,21 +21,8 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 
-# Set necessary environment variables  
+# Set production environment  
+ENV NODE_ENV=production  
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true  
-ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser  
-ENV CHROME_BIN=/usr/bin/chromium-browser  
-ENV CHROME_PATH=/usr/bin/chromium-browser  
-
-# Add required puppeteer flags  
-ENV PUPPETEER_ARGS="\
-  --no-sandbox \
-  --disable-setuid-sandbox \
-  --disable-dev-shm-usage \
-  --disable-gpu \
-  --no-first-run \
-  --no-zygote \
-  --single-process \
-  --disable-software-rasterizer" 
   
 CMD ["npm", "run","start"]
