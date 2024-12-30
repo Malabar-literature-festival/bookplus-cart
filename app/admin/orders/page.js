@@ -12,6 +12,8 @@ import {
   AlertCircle,
   School,
   Download,
+  Pencil,
+  Save,
 } from "lucide-react";
 
 const ORDER_STATUS = {
@@ -50,10 +52,77 @@ export default function AdminOrders() {
   const [showOrderDetails, setShowOrderDetails] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
   const [downloading, setDownloading] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editingOrder, setEditingOrder] = useState(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const handleEditClick = (order) => {
+    setEditMode(true);
+    setEditingOrder({
+      ...order,
+      customer: { ...order.customer },
+      items: order.items.map((item) => ({ ...item })),
+    });
+  };
+
+  const handleSaveEdit = async () => {
+    try {
+      setSaving(true);
+      const response = await fetch(`/api/admin/orders/${editingOrder._id}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customer: editingOrder.customer,
+          items: editingOrder.items,
+          academicYear: editingOrder.academicYear,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        setOrders(
+          orders.map((order) =>
+            order._id === editingOrder._id ? data.data : order
+          )
+        );
+        setEditMode(false);
+        setEditingOrder(null);
+        setShowOrderDetails(data.data);
+      } else {
+        alert("Failed to save changes");
+      }
+    } catch (error) {
+      console.error("Error saving order:", error);
+      alert("Failed to save changes");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleItemQuantityChange = (index, newQuantity) => {
+    setEditingOrder((prev) => ({
+      ...prev,
+      items: prev.items.map((item, i) =>
+        i === index ? { ...item, quantity: parseInt(newQuantity) || 0 } : item
+      ),
+    }));
+  };
+
+  const handleCustomerInfoChange = (field, value) => {
+    setEditingOrder((prev) => ({
+      ...prev,
+      customer: {
+        ...prev.customer,
+        [field]: value,
+      },
+    }));
+  };
 
   const fetchOrders = async () => {
     try {
@@ -195,160 +264,6 @@ export default function AdminOrders() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
-        {/* Order Summary Cards */}
-        <div className="grid grid-cols-5 gap-4">
-          <div className="bg-white p-4 rounded-xl shadow-sm border border-zinc-100">
-            <div className="flex items-center justify-between">
-              <h3 className="text-sm font-medium text-zinc-500">
-                Total Orders
-              </h3>
-              <Package className="w-5 h-5 text-zinc-400" />
-            </div>
-            <p className="mt-2 text-2xl font-semibold text-zinc-900">
-              {orders.length}
-            </p>
-          </div>
-
-          {Object.entries(ORDER_STATUS).map(
-            ([status, { label, icon: Icon, className }]) => {
-              const count = orders.filter(
-                (order) => order.status === status
-              ).length;
-              return (
-                <div
-                  key={status}
-                  className="bg-white p-4 rounded-xl shadow-sm border border-zinc-100"
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-medium text-zinc-500">
-                      {label}
-                    </h3>
-                    <Icon className="w-5 h-5 text-zinc-400" />
-                  </div>
-                  <p className="mt-2 text-2xl font-semibold text-zinc-900">
-                    {count}
-                  </p>
-                </div>
-              );
-            }
-          )}
-        </div>
-
-        {/* Detailed Summary Statistics */}
-        <div className="bg-white rounded-xl shadow-sm border border-zinc-100 mb-3">
-          <div className="p-6">
-            <h2 className="text-lg font-medium text-zinc-900 mb-6">
-              Summary Statistics
-            </h2>
-
-            <div className="grid grid-cols-2 gap-8">
-              {/* Book Statistics */}
-              <div>
-                <h3 className="text-sm font-medium text-zinc-900 mb-4">
-                  Book Orders Summary
-                </h3>
-                <div className="space-y-4">
-                  {Object.entries(
-                    orders.reduce((acc, order) => {
-                      order.items.forEach((item) => {
-                        const key = `${item.title} (Class ${item.class} - ${item.section})`;
-                        if (!acc[key]) {
-                          acc[key] = {
-                            quantity: 0,
-                            orders: new Set(),
-                            publisher: item.publisher,
-                            subject: item.subject,
-                          };
-                        }
-                        acc[key].quantity += item.quantity;
-                        acc[key].orders.add(order._id);
-                      });
-                      return acc;
-                    }, {})
-                  ).map(([book, stats]) => (
-                    <div key={book} className="bg-zinc-50 p-4 rounded-lg">
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <h4 className="font-medium text-zinc-900">{book}</h4>
-                          <p className="text-sm text-zinc-600 mt-1">
-                            Publisher: {stats.publisher} • Subject:{" "}
-                            {stats.subject}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <p className="font-medium text-zinc-900">
-                            Qty: {stats.quantity}
-                          </p>
-                          <p className="text-sm text-zinc-600">
-                            Orders: {stats.orders.size}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Class-wise Statistics */}
-              <div>
-                <h3 className="text-sm font-medium text-zinc-900 mb-4">
-                  Class-wise Summary
-                </h3>
-                <div className="space-y-4">
-                  {Object.entries(
-                    orders.reduce((acc, order) => {
-                      order.items.forEach((item) => {
-                        if (!acc[item.class]) {
-                          acc[item.class] = {
-                            totalBooks: 0,
-                            totalOrders: new Set(),
-                            sections: new Set(),
-                            subjects: new Set(),
-                          };
-                        }
-                        acc[item.class].totalBooks += item.quantity;
-                        acc[item.class].totalOrders.add(order._id);
-                        acc[item.class].sections.add(item.section);
-                        acc[item.class].subjects.add(item.subject);
-                      });
-                      return acc;
-                    }, {})
-                  )
-                    .sort((a, b) => a[0] - b[0])
-                    .map(([className, stats]) => (
-                      <div
-                        key={className}
-                        className="bg-zinc-50 p-4 rounded-lg"
-                      >
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <h4 className="font-medium text-zinc-900">
-                              Class {className}
-                            </h4>
-                            <p className="text-sm text-zinc-600 mt-1">
-                              {Array.from(stats.sections).join(", ")}
-                            </p>
-                            <p className="text-sm text-zinc-600">
-                              Subjects: {stats.subjects.size}
-                            </p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium text-zinc-900">
-                              {stats.totalBooks} Books
-                            </p>
-                            <p className="text-sm text-zinc-600">
-                              {stats.totalOrders.size} Orders
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-zinc-100">
           {loading ? (
             <div className="p-12 text-center text-zinc-500">
@@ -400,7 +315,7 @@ export default function AdminOrders() {
         </div>
       </main>
 
-      {/* Order Details Modal */}
+      {/* Updated Order Details Modal with Edit Mode */}
       {showOrderDetails && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto">
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl my-8">
@@ -410,25 +325,59 @@ export default function AdminOrders() {
                   Order Details
                 </h2>
                 <p className="text-sm text-zinc-500 mt-1">
-                  Academic Year: {showOrderDetails.academicYear}
+                  Academic Year:{" "}
+                  {editMode ? (
+                    <input
+                      type="text"
+                      value={editingOrder.academicYear}
+                      onChange={(e) =>
+                        setEditingOrder((prev) => ({
+                          ...prev,
+                          academicYear: e.target.value,
+                        }))
+                      }
+                      className="px-2 py-1 border rounded"
+                    />
+                  ) : (
+                    showOrderDetails.academicYear
+                  )}
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                {!editMode && (
+                  <button
+                    onClick={() => handleEditClick(showOrderDetails)}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-lg hover:bg-zinc-200 transition-colors"
+                  >
+                    <Pencil className="w-4 h-4" />
+                    Edit Order
+                  </button>
+                )}
+                {editMode && (
+                  <button
+                    onClick={handleSaveEdit}
+                    disabled={saving}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-900 text-white rounded-lg hover:bg-zinc-800 transition-colors"
+                  >
+                    <Save className="w-4 h-4" />
+                    {saving ? "Saving..." : "Save Changes"}
+                  </button>
+                )}
                 <button
                   onClick={() => handleDownloadPDF(showOrderDetails._id)}
                   disabled={downloading}
                   className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors 
-                    ${
-                      downloading
-                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-                        : "bg-zinc-900 text-white hover:bg-zinc-800"
-                    }`}
+                    ${downloading ? "bg-zinc-100 text-zinc-400" : "bg-zinc-900 text-white hover:bg-zinc-800"}`}
                 >
                   <Download className="w-4 h-4" />
                   {downloading ? "Downloading..." : "Download PDF"}
                 </button>
                 <button
-                  onClick={() => setShowOrderDetails(null)}
+                  onClick={() => {
+                    setShowOrderDetails(null);
+                    setEditMode(false);
+                    setEditingOrder(null);
+                  }}
                   className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
                 >
                   <X className="w-5 h-5 text-zinc-600" />
@@ -442,11 +391,62 @@ export default function AdminOrders() {
                   <h3 className="text-sm font-medium text-zinc-900 mb-2">
                     Customer Information
                   </h3>
-                  <div className="text-sm text-zinc-600 space-y-1">
-                    <p>{showOrderDetails.customer.name}</p>
-                    <p>{showOrderDetails.customer.email}</p>
-                    <p>Mobile: {showOrderDetails.customer.mobileNumber}</p>
-                    <p>WhatsApp: {showOrderDetails.customer.whatsappNumber}</p>
+                  <div className="text-sm text-zinc-600 space-y-2">
+                    {editMode ? (
+                      <>
+                        <input
+                          type="text"
+                          value={editingOrder.customer.name}
+                          onChange={(e) =>
+                            handleCustomerInfoChange("name", e.target.value)
+                          }
+                          className="w-full px-3 py-1.5 border rounded"
+                          placeholder="Name"
+                        />
+                        <input
+                          type="email"
+                          value={editingOrder.customer.email}
+                          onChange={(e) =>
+                            handleCustomerInfoChange("email", e.target.value)
+                          }
+                          className="w-full px-3 py-1.5 border rounded"
+                          placeholder="Email"
+                        />
+                        <input
+                          type="text"
+                          value={editingOrder.customer.mobileNumber}
+                          onChange={(e) =>
+                            handleCustomerInfoChange(
+                              "mobileNumber",
+                              e.target.value
+                            )
+                          }
+                          className="w-full px-3 py-1.5 border rounded"
+                          placeholder="Mobile Number"
+                        />
+                        <input
+                          type="text"
+                          value={editingOrder.customer.whatsappNumber}
+                          onChange={(e) =>
+                            handleCustomerInfoChange(
+                              "whatsappNumber",
+                              e.target.value
+                            )
+                          }
+                          className="w-full px-3 py-1.5 border rounded"
+                          placeholder="WhatsApp Number"
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <p>{showOrderDetails.customer.name}</p>
+                        <p>{showOrderDetails.customer.email}</p>
+                        <p>Mobile: {showOrderDetails.customer.mobileNumber}</p>
+                        <p>
+                          WhatsApp: {showOrderDetails.customer.whatsappNumber}
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -457,7 +457,22 @@ export default function AdminOrders() {
                   <div className="text-sm text-zinc-600">
                     <div className="flex items-center gap-2">
                       <School className="w-4 h-4" />
-                      <p>{showOrderDetails.customer.institution}</p>
+                      {editMode ? (
+                        <input
+                          type="text"
+                          value={editingOrder.customer.institution}
+                          onChange={(e) =>
+                            handleCustomerInfoChange(
+                              "institution",
+                              e.target.value
+                            )
+                          }
+                          className="w-full px-3 py-1.5 border rounded"
+                          placeholder="Institution"
+                        />
+                      ) : (
+                        <p>{showOrderDetails.customer.institution}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -468,60 +483,80 @@ export default function AdminOrders() {
                   Order Items
                 </h3>
                 <div className="space-y-4">
-                  {showOrderDetails.items.map((item) => (
-                    <div
-                      key={item.bookId}
-                      className="grid grid-cols-2 gap-4 p-4 bg-zinc-50 rounded-lg"
-                    >
-                      <div>
-                        <p className="font-medium text-zinc-900">
-                          {item.title}
-                        </p>
-                        <p className="text-sm text-zinc-600">
-                          Class {item.class} - {item.section}
-                        </p>
-                        <p className="text-sm text-zinc-600">
-                          Subject: {item.subject}
-                        </p>
+                  {(editMode ? editingOrder.items : showOrderDetails.items).map(
+                    (item, index) => (
+                      <div
+                        key={item.bookId}
+                        className="grid grid-cols-2 gap-4 p-4 bg-zinc-50 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-medium text-zinc-900">
+                            {item.title}
+                          </p>
+                          <p className="text-sm text-zinc-600">
+                            Class {item.class} - {item.section}
+                          </p>
+                          <p className="text-sm text-zinc-600">
+                            Subject: {item.subject}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-zinc-600">
+                            Publisher: {item.publisher}
+                          </p>
+                          <p className="text-sm text-zinc-600">
+                            Serial #: {item.serialNumber}
+                          </p>
+                          <div className="font-medium text-zinc-900">
+                            Quantity:{" "}
+                            {editMode ? (
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) =>
+                                  handleItemQuantityChange(
+                                    index,
+                                    e.target.value
+                                  )
+                                }
+                                className="w-20 px-2 py-1 border rounded text-right"
+                              />
+                            ) : (
+                              item.quantity
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="text-right">
-                        <p className="text-sm text-zinc-600">
-                          Publisher: {item.publisher}
-                        </p>
-                        <p className="text-sm text-zinc-600">
-                          Serial #: {item.serialNumber}
-                        </p>
-                        <p className="font-medium text-zinc-900">
-                          Quantity: {item.quantity}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+                    )
+                  )}
                 </div>
               </div>
 
-              <div className="border-t border-zinc-200 mt-6 pt-6">
-                <h3 className="text-sm font-medium text-zinc-900 mb-4">
-                  Update Status
-                </h3>
-                <div className="flex gap-2">
-                  {Object.entries(ORDER_STATUS).map(([status, { label }]) => (
-                    <button
-                      key={status}
-                      onClick={() =>
-                        handleUpdateStatus(showOrderDetails._id, status)
-                      }
-                      className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                        showOrderDetails.status === status
-                          ? "bg-zinc-900 text-white"
-                          : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
-                      }`}
-                    >
-                      {label}
-                    </button>
-                  ))}
+              {!editMode && (
+                <div className="border-t border-zinc-200 mt-6 pt-6">
+                  <h3 className="text-sm font-medium text-zinc-900 mb-4">
+                    Update Status
+                  </h3>
+                  <div className="flex gap-2">
+                    {Object.entries(ORDER_STATUS).map(([status, { label }]) => (
+                      <button
+                        key={status}
+                        onClick={() =>
+                          handleUpdateStatus(showOrderDetails._id, status)
+                        }
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          showOrderDetails.status === status
+                            ? "bg-zinc-900 text-white"
+                            : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"
+                        }`}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

@@ -6,14 +6,11 @@ import Order from "@/models/Order";
 export async function PATCH(request, { params }) {
   try {
     await connectDB();
+    const updateData = await request.json();
 
-    const { status } = await request.json();
-
-    const order = await Order.findByIdAndUpdate(
-      params.id,
-      { status },
-      { new: true }
-    );
+    const order = await Order.findByIdAndUpdate(params.id, updateData, {
+      new: true,
+    });
 
     if (!order) {
       return NextResponse.json(
