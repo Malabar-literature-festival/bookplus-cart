@@ -215,9 +215,9 @@ export default function AdminOrders() {
 
       {/* Order Details Modal */}
       {showOrderDetails && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50">
-          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl">
-            <div className="flex items-center justify-between p-6 border-b border-zinc-200">
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto">
+          <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl my-8">
+            <div className="flex items-center justify-between p-6 border-b border-zinc-200 sticky top-0 bg-white rounded-t-2xl">
               <div>
                 <h2 className="text-xl font-medium text-zinc-900">
                   Order Details
@@ -234,7 +234,7 @@ export default function AdminOrders() {
               </button>
             </div>
 
-            <div className="p-6">
+            <div className="p-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
               <div className="grid grid-cols-2 gap-6 mb-6">
                 <div>
                   <h3 className="text-sm font-medium text-zinc-900 mb-2">
