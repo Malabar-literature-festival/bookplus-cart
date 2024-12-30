@@ -6,9 +6,10 @@ import {
   Trash2,
   X,
   Upload,
-  Download,
   Book,
   Search,
+  Truck,
+  GitGraph,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import Link from "next/link";
@@ -255,8 +256,21 @@ export default function AdminBooks() {
                 className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-zinc-200"
               />
             </div>
-            <div>
-              <Link href="/admin/orders">Order</Link>
+            <div className="flex items-center gap-4 mt-4">
+              <Link
+                href="/admin/orders"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 text-zinc-800 rounded-lg hover:bg-zinc-50 transition-colors"
+              >
+                <Truck className="w-4 h-4" />
+                Orders
+              </Link>
+              <Link
+                href="/admin/summary"
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-zinc-200 text-zinc-800 rounded-lg hover:bg-zinc-50 transition-colors"
+              >
+                <GitGraph className="w-4 h-4" />
+                Order Summary
+              </Link>
             </div>
           </div>
         </div>
