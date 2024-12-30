@@ -11,6 +11,7 @@ import {
   XCircle,
   AlertCircle,
   School,
+  Download,
 } from "lucide-react";
 
 const ORDER_STATUS = {
@@ -48,6 +49,7 @@ export default function AdminOrders() {
   const [searchQuery, setSearchQuery] = useState("");
   const [showOrderDetails, setShowOrderDetails] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
+  const [downloading, setDownloading] = useState(false);
 
   useEffect(() => {
     fetchOrders();
@@ -92,6 +94,33 @@ export default function AdminOrders() {
       }
     } catch (error) {
       console.error("Error updating order status:", error);
+    }
+  };
+
+  const handleDownloadPDF = async (orderId) => {
+    try {
+      setDownloading(true);
+      const response = await fetch(`/api/admin/orders/${orderId}/pdf`);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to generate PDF");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `order-${orderId}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Error downloading PDF:", error);
+      alert("Failed to download PDF. Please try again.");
+    } finally {
+      setDownloading(false);
     }
   };
 
@@ -166,6 +195,160 @@ export default function AdminOrders() {
       </header>
 
       <main className="max-w-7xl mx-auto px-6 py-8">
+        {/* Order Summary Cards */}
+        <div className="grid grid-cols-5 gap-4">
+          <div className="bg-white p-4 rounded-xl shadow-sm border border-zinc-100">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium text-zinc-500">
+                Total Orders
+              </h3>
+              <Package className="w-5 h-5 text-zinc-400" />
+            </div>
+            <p className="mt-2 text-2xl font-semibold text-zinc-900">
+              {orders.length}
+            </p>
+          </div>
+
+          {Object.entries(ORDER_STATUS).map(
+            ([status, { label, icon: Icon, className }]) => {
+              const count = orders.filter(
+                (order) => order.status === status
+              ).length;
+              return (
+                <div
+                  key={status}
+                  className="bg-white p-4 rounded-xl shadow-sm border border-zinc-100"
+                >
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-medium text-zinc-500">
+                      {label}
+                    </h3>
+                    <Icon className="w-5 h-5 text-zinc-400" />
+                  </div>
+                  <p className="mt-2 text-2xl font-semibold text-zinc-900">
+                    {count}
+                  </p>
+                </div>
+              );
+            }
+          )}
+        </div>
+
+        {/* Detailed Summary Statistics */}
+        <div className="bg-white rounded-xl shadow-sm border border-zinc-100 mb-3">
+          <div className="p-6">
+            <h2 className="text-lg font-medium text-zinc-900 mb-6">
+              Summary Statistics
+            </h2>
+
+            <div className="grid grid-cols-2 gap-8">
+              {/* Book Statistics */}
+              <div>
+                <h3 className="text-sm font-medium text-zinc-900 mb-4">
+                  Book Orders Summary
+                </h3>
+                <div className="space-y-4">
+                  {Object.entries(
+                    orders.reduce((acc, order) => {
+                      order.items.forEach((item) => {
+                        const key = `${item.title} (Class ${item.class} - ${item.section})`;
+                        if (!acc[key]) {
+                          acc[key] = {
+                            quantity: 0,
+                            orders: new Set(),
+                            publisher: item.publisher,
+                            subject: item.subject,
+                          };
+                        }
+                        acc[key].quantity += item.quantity;
+                        acc[key].orders.add(order._id);
+                      });
+                      return acc;
+                    }, {})
+                  ).map(([book, stats]) => (
+                    <div key={book} className="bg-zinc-50 p-4 rounded-lg">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-medium text-zinc-900">{book}</h4>
+                          <p className="text-sm text-zinc-600 mt-1">
+                            Publisher: {stats.publisher} • Subject:{" "}
+                            {stats.subject}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-zinc-900">
+                            Qty: {stats.quantity}
+                          </p>
+                          <p className="text-sm text-zinc-600">
+                            Orders: {stats.orders.size}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Class-wise Statistics */}
+              <div>
+                <h3 className="text-sm font-medium text-zinc-900 mb-4">
+                  Class-wise Summary
+                </h3>
+                <div className="space-y-4">
+                  {Object.entries(
+                    orders.reduce((acc, order) => {
+                      order.items.forEach((item) => {
+                        if (!acc[item.class]) {
+                          acc[item.class] = {
+                            totalBooks: 0,
+                            totalOrders: new Set(),
+                            sections: new Set(),
+                            subjects: new Set(),
+                          };
+                        }
+                        acc[item.class].totalBooks += item.quantity;
+                        acc[item.class].totalOrders.add(order._id);
+                        acc[item.class].sections.add(item.section);
+                        acc[item.class].subjects.add(item.subject);
+                      });
+                      return acc;
+                    }, {})
+                  )
+                    .sort((a, b) => a[0] - b[0])
+                    .map(([className, stats]) => (
+                      <div
+                        key={className}
+                        className="bg-zinc-50 p-4 rounded-lg"
+                      >
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h4 className="font-medium text-zinc-900">
+                              Class {className}
+                            </h4>
+                            <p className="text-sm text-zinc-600 mt-1">
+                              {Array.from(stats.sections).join(", ")}
+                            </p>
+                            <p className="text-sm text-zinc-600">
+                              Subjects: {stats.subjects.size}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-medium text-zinc-900">
+                              {stats.totalBooks} Books
+                            </p>
+                            <p className="text-sm text-zinc-600">
+                              {stats.totalOrders.size} Orders
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-zinc-100">
           {loading ? (
             <div className="p-12 text-center text-zinc-500">
@@ -182,6 +365,10 @@ export default function AdminOrders() {
                       <h3 className="text-sm font-medium text-zinc-900">
                         Order #{order._id}
                       </h3>
+                      <div className="mt-1 text-sm text-zinc-500">
+                        Institution:{" "}
+                        <strong>{order.customer.institution}</strong>
+                      </div>
                       <div className="mt-1 text-sm text-zinc-500">
                         {new Date(order.createdAt).toLocaleDateString()}
                       </div>
@@ -217,7 +404,7 @@ export default function AdminOrders() {
       {showOrderDetails && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto">
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl my-8">
-            <div className="flex items-center justify-between p-6 border-b border-zinc-200 sticky top-0 bg-white rounded-t-2xl">
+            <div className="flex items-center justify-between p-6 border-b border-zinc-200 sticky top-0 bg-white rounded-t-2xl z-10">
               <div>
                 <h2 className="text-xl font-medium text-zinc-900">
                   Order Details
@@ -226,12 +413,27 @@ export default function AdminOrders() {
                   Academic Year: {showOrderDetails.academicYear}
                 </p>
               </div>
-              <button
-                onClick={() => setShowOrderDetails(null)}
-                className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
-              >
-                <X className="w-5 h-5 text-zinc-600" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleDownloadPDF(showOrderDetails._id)}
+                  disabled={downloading}
+                  className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors 
+                    ${
+                      downloading
+                        ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
+                        : "bg-zinc-900 text-white hover:bg-zinc-800"
+                    }`}
+                >
+                  <Download className="w-4 h-4" />
+                  {downloading ? "Downloading..." : "Download PDF"}
+                </button>
+                <button
+                  onClick={() => setShowOrderDetails(null)}
+                  className="p-2 hover:bg-zinc-100 rounded-full transition-colors"
+                >
+                  <X className="w-5 h-5 text-zinc-600" />
+                </button>
+              </div>
             </div>
 
             <div className="p-6 max-h-[calc(100vh-12rem)] overflow-y-auto">
