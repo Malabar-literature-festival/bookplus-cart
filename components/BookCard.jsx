@@ -5,19 +5,41 @@ import { useCart } from "@/context/CartContext";
 
 export default function BookCard({ book }) {
   const [showDetails, setShowDetails] = useState(false);
-  const [selectedQuantity, setSelectedQuantity] = useState(0);
+  const [localQuantity, setLocalQuantity] = useState("0");
   const { cartItems, addToCart } = useCart();
 
-  // Update quantity whenever cart items change
+  // Update local quantity when cart items change
   useEffect(() => {
     const savedItem = cartItems.find((item) => item.id === book._id);
-    setSelectedQuantity(savedItem ? savedItem.quantity : 0);
+    setLocalQuantity(savedItem ? String(savedItem.quantity) : "0");
   }, [book._id, cartItems]);
 
   const handleQuantityChange = (value) => {
-    const newValue = Math.max(0, value);
-    setSelectedQuantity(newValue);
-    addToCart(book, newValue);
+    // Handle direct input
+    if (typeof value === "string") {
+      setLocalQuantity(value);
+
+      // Only update cart if the value is a valid number
+      const numValue = parseInt(value);
+      if (!isNaN(numValue) && numValue >= 0) {
+        addToCart(book, numValue);
+      }
+    }
+    // Handle increment/decrement buttons
+    else {
+      const newValue = Math.max(0, value);
+      setLocalQuantity(String(newValue));
+      addToCart(book, newValue);
+    }
+  };
+
+  const handleInputBlur = () => {
+    // Clean up invalid input on blur
+    const numValue = parseInt(localQuantity);
+    if (isNaN(numValue) || numValue < 0) {
+      setLocalQuantity("0");
+      addToCart(book, 0);
+    }
   };
 
   return (
@@ -64,22 +86,26 @@ export default function BookCard({ book }) {
             <div className="flex items-center gap-3">
               <div className="flex items-center border rounded-lg overflow-hidden shadow-sm">
                 <button
-                  onClick={() => handleQuantityChange(selectedQuantity - 1)}
+                  onClick={() =>
+                    handleQuantityChange(parseInt(localQuantity) - 1)
+                  }
                   className="p-2 hover:bg-zinc-50 transition-colors"
                 >
                   <Minus className="w-4 h-4 text-zinc-600" />
                 </button>
                 <input
-                  type="number"
-                  min="0"
-                  value={selectedQuantity}
-                  onChange={(e) =>
-                    handleQuantityChange(parseInt(e.target.value) || 0)
-                  }
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  value={localQuantity}
+                  onChange={(e) => handleQuantityChange(e.target.value)}
+                  onBlur={handleInputBlur}
                   className="w-12 text-center border-x focus:outline-none"
                 />
                 <button
-                  onClick={() => handleQuantityChange(selectedQuantity + 1)}
+                  onClick={() =>
+                    handleQuantityChange(parseInt(localQuantity) + 1)
+                  }
                   className="p-2 hover:bg-zinc-50 transition-colors"
                 >
                   <Plus className="w-4 h-4 text-zinc-600" />
@@ -126,22 +152,26 @@ export default function BookCard({ book }) {
               <div className="flex flex-col md:flex-row items-stretch md:items-center gap-4">
                 <div className="flex items-center border rounded-lg overflow-hidden shadow-sm">
                   <button
-                    onClick={() => handleQuantityChange(selectedQuantity - 1)}
+                    onClick={() =>
+                      handleQuantityChange(parseInt(localQuantity) - 1)
+                    }
                     className="p-2 hover:bg-zinc-50 transition-colors"
                   >
                     <Minus className="w-4 h-4 text-zinc-600" />
                   </button>
                   <input
-                    type="number"
-                    min="0"
-                    value={selectedQuantity}
-                    onChange={(e) =>
-                      handleQuantityChange(parseInt(e.target.value) || 0)
-                    }
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    value={localQuantity}
+                    onChange={(e) => handleQuantityChange(e.target.value)}
+                    onBlur={handleInputBlur}
                     className="w-12 text-center border-x focus:outline-none"
                   />
                   <button
-                    onClick={() => handleQuantityChange(selectedQuantity + 1)}
+                    onClick={() =>
+                      handleQuantityChange(parseInt(localQuantity) + 1)
+                    }
                     className="p-2 hover:bg-zinc-50 transition-colors"
                   >
                     <Plus className="w-4 h-4 text-zinc-600" />
