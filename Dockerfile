@@ -11,7 +11,8 @@ RUN npm run build
 FROM node:18.20.5-alpine AS master
 
 # Install Chromium and required dependencies  
-RUN apk add --no-cache chromium chromium-chromedriver  
+RUN apk add --no-cache chromium chromium-chromedriver
+RUN apt-get update && apt-get install -y fonts-arabic
 
 WORKDIR /app
 
