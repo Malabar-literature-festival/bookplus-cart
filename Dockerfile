@@ -24,22 +24,16 @@ RUN apk add --no-cache \
     cairo \
     pango \
     ttf-freefont \
-    # Enhanced font packages for Arabic
     font-noto-arabic \
     font-noto \
     font-noto-extra \
-    # Additional Arabic fonts
     font-arabic-misc \
-    # Amiri font
-    wget \
-    # Other dependencies
+    # Remove wget since we're not downloading fonts manually anymore
     curl \
     && rm -rf /var/cache/apk/*
 
-# Download and install Amiri font
+# Create font directories and update font cache
 RUN mkdir -p /usr/share/fonts/custom && \
-    wget -O /usr/share/fonts/custom/Amiri-Regular.ttf https://github.com/alif-type/amiri/raw/master/fonts/Amiri-Regular.ttf && \
-    wget -O /usr/share/fonts/custom/Amiri-Bold.ttf https://github.com/alif-type/amiri/raw/master/fonts/Amiri-Bold.ttf && \
     fc-cache -fv
 
 # Create font configuration file for better Arabic rendering
@@ -69,7 +63,7 @@ RUN echo '<?xml version="1.0"?>' > /etc/fonts/local.conf && \
     echo '      <string>ar</string>' >> /etc/fonts/local.conf && \
     echo '    </test>' >> /etc/fonts/local.conf && \
     echo '    <edit name="family" mode="prepend" binding="strong">' >> /etc/fonts/local.conf && \
-    echo '      <string>Amiri</string>' >> /etc/fonts/local.conf && \
+    echo '      <string>Noto Naskh Arabic</string>' >> /etc/fonts/local.conf && \
     echo '    </edit>' >> /etc/fonts/local.conf && \
     echo '  </match>' >> /etc/fonts/local.conf && \
     echo '</fontconfig>' >> /etc/fonts/local.conf
