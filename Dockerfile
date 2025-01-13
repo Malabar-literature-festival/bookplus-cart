@@ -28,7 +28,6 @@ RUN apk add --no-cache \
     font-noto \
     font-noto-extra \
     font-arabic-misc \
-    # Remove wget since we're not downloading fonts manually anymore
     curl \
     && rm -rf /var/cache/apk/*
 
@@ -50,21 +49,6 @@ RUN echo '<?xml version="1.0"?>' > /etc/fonts/local.conf && \
     echo '    <edit name="hintstyle" mode="assign">' >> /etc/fonts/local.conf && \
     echo '      <const>hintslight</const>' >> /etc/fonts/local.conf && \
     echo '    </edit>' >> /etc/fonts/local.conf && \
-    echo '    <edit name="rgba" mode="assign">' >> /etc/fonts/local.conf && \
-    echo '      <const>rgb</const>' >> /etc/fonts/local.conf && \
-    echo '    </edit>' >> /etc/fonts/local.conf && \
-    echo '    <edit name="lcdfilter" mode="assign">' >> /etc/fonts/local.conf && \
-    echo '      <const>lcddefault</const>' >> /etc/fonts/local.conf && \
-    echo '    </edit>' >> /etc/fonts/local.conf && \
-    echo '  </match>' >> /etc/fonts/local.conf && \
-    echo '  <!-- Configure Arabic font rendering -->' >> /etc/fonts/local.conf && \
-    echo '  <match target="pattern">' >> /etc/fonts/local.conf && \
-    echo '    <test name="lang" compare="contains">' >> /etc/fonts/local.conf && \
-    echo '      <string>ar</string>' >> /etc/fonts/local.conf && \
-    echo '    </test>' >> /etc/fonts/local.conf && \
-    echo '    <edit name="family" mode="prepend" binding="strong">' >> /etc/fonts/local.conf && \
-    echo '      <string>Noto Naskh Arabic</string>' >> /etc/fonts/local.conf && \
-    echo '    </edit>' >> /etc/fonts/local.conf && \
     echo '  </match>' >> /etc/fonts/local.conf && \
     echo '</fontconfig>' >> /etc/fonts/local.conf
 
@@ -79,27 +63,19 @@ COPY --from=builder /app/node_modules ./node_modules
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
-ENV FONTCONFIG_PATH=/etc/fonts
-ENV FC_DEBUG=1
+ENV CHROME_PATH=/usr/bin/chromium-browser
+ENV CHROME_BIN=/usr/bin/chromium-browser
 
 # Create chrome user and setup permissions
-RUN addgroup -S chrome && \
-    adduser -S chrome -G chrome && \
-    mkdir -p /home/chrome/downloads && \
-    chown -R chrome:chrome /home/chrome && \
-    mkdir -p /tmp/chrome && \
-    chown -R chrome:chrome /tmp/chrome
+RUN mkdir -p /tmp/chrome && \
+    addgroup -S pptruser && adduser -S -G pptruser pptruser && \
+    chown -R pptruser:pptruser /app && \
+    chown -R pptruser:pptruser /tmp/chrome && \
+    chown -R pptruser:pptruser /usr/share/fonts/custom
 
-# Set permissions for fonts
-RUN chown -R chrome:chrome /usr/share/fonts/custom && \
-    chmod -R 755 /usr/share/fonts/custom
-
-USER chrome
+# Switch to pptruser
+USER pptruser
 
 EXPOSE 3000
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
 CMD ["npm", "run", "start"]
