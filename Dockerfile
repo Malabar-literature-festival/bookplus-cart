@@ -1,37 +1,82 @@
+# Build stage
 FROM node:18.20.5-alpine AS builder
 
+# Install build dependencies
+RUN apk add --no-cache python3 make g++
+
 WORKDIR /app
-COPY package*.json .
+COPY package*.json ./
 
+# Install dependencies
 RUN npm install
-RUN npm i puppeteer-core @sparticuz/chromium  
-COPY . .
+RUN npm i puppeteer-core @sparticuz/chromium
 
+COPY . .
 RUN npm run build
+
+# Production stage
 FROM node:18.20.5-alpine AS master
 
-# Install Chromium and required dependencies  
+# Install Chromium and font dependencies
 RUN apk add --no-cache \
     chromium \
     chromium-chromedriver \
-    # Add Arabic and other font support
-    font-noto-arabic \
+    # Core font packages
+    fontconfig \
     font-noto \
+    font-noto-arabic \
     font-noto-extra \
-    # Add any additional required fonts
     font-noto-cjk \
-    font-noto-emoji
+    font-noto-emoji \
+    # Additional dependencies for font rendering
+    freetype \
+    freetype-dev \
+    harfbuzz \
+    # Required for proper text rendering
+    ttf-freefont \
+    # Additional Arabic fonts
+    font-arabic-misc \
+    # Cache cleaning and font configuration
+    && fc-cache -fv
 
+# Create and set work directory
 WORKDIR /app
 
-COPY --from=builder /app/package.json ./
-COPY --from=builder /app/package-lock.json ./
+# Copy built assets from builder stage
+COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/node_modules ./node_modules
 
-# Set production environment  
-ENV NODE_ENV=production  
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true  
-  
-CMD ["npm", "run","start"]
+# Environment variables
+ENV NODE_ENV=production
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
+ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Font configuration
+RUN mkdir -p /usr/share/fonts/custom && \
+    cp -r /usr/share/fonts/noto-arabic/* /usr/share/fonts/custom/ && \
+    fc-cache -fv /usr/share/fonts/custom
+
+# Create chrome user and setup chrome directories
+RUN addgroup -S chrome && \
+    adduser -S chrome -G chrome && \
+    mkdir -p /home/chrome/downloads && \
+    chown -R chrome:chrome /home/chrome
+
+# Security configurations
+RUN mkdir -p /tmp/chrome && \
+    chown -R chrome:chrome /tmp/chrome
+
+# Switch to chrome user for security
+USER chrome
+
+# Expose port
+EXPOSE 3000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
+
+# Start command
+CMD ["npm", "run", "start"]
