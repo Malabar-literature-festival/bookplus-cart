@@ -1,4 +1,3 @@
-# Build stage
 FROM node:18.20.5-alpine AS builder
 
 # Install build dependencies
@@ -7,42 +6,76 @@ RUN apk add --no-cache python3 make g++
 WORKDIR /app
 COPY package*.json ./
 
-# Install dependencies
 RUN npm install
 RUN npm i puppeteer-core @sparticuz/chromium
-
 COPY . .
 RUN npm run build
 
-# Production stage
 FROM node:18.20.5-alpine AS master
 
-# Install Chromium and font dependencies
+# Install Chromium and enhanced font dependencies
 RUN apk add --no-cache \
     chromium \
     chromium-chromedriver \
-    # Core font packages
     fontconfig \
-    font-noto \
-    font-noto-arabic \
-    font-noto-extra \
-    font-noto-cjk \
-    font-noto-emoji \
-    # Additional dependencies for font rendering
     freetype \
     freetype-dev \
     harfbuzz \
-    # Required for proper text rendering
+    cairo \
+    pango \
     ttf-freefont \
+    # Enhanced font packages for Arabic
+    font-noto-arabic \
+    font-noto \
+    font-noto-extra \
     # Additional Arabic fonts
     font-arabic-misc \
-    # Cache cleaning and font configuration
-    && fc-cache -fv
+    # Amiri font
+    wget \
+    # Other dependencies
+    curl \
+    && rm -rf /var/cache/apk/*
 
-# Create and set work directory
+# Download and install Amiri font
+RUN mkdir -p /usr/share/fonts/custom && \
+    wget -O /usr/share/fonts/custom/Amiri-Regular.ttf https://github.com/alif-type/amiri/raw/master/fonts/Amiri-Regular.ttf && \
+    wget -O /usr/share/fonts/custom/Amiri-Bold.ttf https://github.com/alif-type/amiri/raw/master/fonts/Amiri-Bold.ttf && \
+    fc-cache -fv
+
+# Create font configuration file for better Arabic rendering
+RUN echo '<?xml version="1.0"?>' > /etc/fonts/local.conf && \
+    echo '<!DOCTYPE fontconfig SYSTEM "fonts.dtd">' >> /etc/fonts/local.conf && \
+    echo '<fontconfig>' >> /etc/fonts/local.conf && \
+    echo '  <match target="font">' >> /etc/fonts/local.conf && \
+    echo '    <edit name="antialias" mode="assign">' >> /etc/fonts/local.conf && \
+    echo '      <bool>true</bool>' >> /etc/fonts/local.conf && \
+    echo '    </edit>' >> /etc/fonts/local.conf && \
+    echo '    <edit name="hinting" mode="assign">' >> /etc/fonts/local.conf && \
+    echo '      <bool>true</bool>' >> /etc/fonts/local.conf && \
+    echo '    </edit>' >> /etc/fonts/local.conf && \
+    echo '    <edit name="hintstyle" mode="assign">' >> /etc/fonts/local.conf && \
+    echo '      <const>hintslight</const>' >> /etc/fonts/local.conf && \
+    echo '    </edit>' >> /etc/fonts/local.conf && \
+    echo '    <edit name="rgba" mode="assign">' >> /etc/fonts/local.conf && \
+    echo '      <const>rgb</const>' >> /etc/fonts/local.conf && \
+    echo '    </edit>' >> /etc/fonts/local.conf && \
+    echo '    <edit name="lcdfilter" mode="assign">' >> /etc/fonts/local.conf && \
+    echo '      <const>lcddefault</const>' >> /etc/fonts/local.conf && \
+    echo '    </edit>' >> /etc/fonts/local.conf && \
+    echo '  </match>' >> /etc/fonts/local.conf && \
+    echo '  <!-- Configure Arabic font rendering -->' >> /etc/fonts/local.conf && \
+    echo '  <match target="pattern">' >> /etc/fonts/local.conf && \
+    echo '    <test name="lang" compare="contains">' >> /etc/fonts/local.conf && \
+    echo '      <string>ar</string>' >> /etc/fonts/local.conf && \
+    echo '    </test>' >> /etc/fonts/local.conf && \
+    echo '    <edit name="family" mode="prepend" binding="strong">' >> /etc/fonts/local.conf && \
+    echo '      <string>Amiri</string>' >> /etc/fonts/local.conf && \
+    echo '    </edit>' >> /etc/fonts/local.conf && \
+    echo '  </match>' >> /etc/fonts/local.conf && \
+    echo '</fontconfig>' >> /etc/fonts/local.conf
+
 WORKDIR /app
 
-# Copy built assets from builder stage
 COPY --from=builder /app/package*.json ./
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
@@ -52,31 +85,27 @@ COPY --from=builder /app/node_modules ./node_modules
 ENV NODE_ENV=production
 ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
+ENV FONTCONFIG_PATH=/etc/fonts
+ENV FC_DEBUG=1
 
-# Font configuration
-RUN mkdir -p /usr/share/fonts/custom && \
-    cp -r /usr/share/fonts/noto-arabic/* /usr/share/fonts/custom/ && \
-    fc-cache -fv /usr/share/fonts/custom
-
-# Create chrome user and setup chrome directories
+# Create chrome user and setup permissions
 RUN addgroup -S chrome && \
     adduser -S chrome -G chrome && \
     mkdir -p /home/chrome/downloads && \
-    chown -R chrome:chrome /home/chrome
-
-# Security configurations
-RUN mkdir -p /tmp/chrome && \
+    chown -R chrome:chrome /home/chrome && \
+    mkdir -p /tmp/chrome && \
     chown -R chrome:chrome /tmp/chrome
 
-# Switch to chrome user for security
+# Set permissions for fonts
+RUN chown -R chrome:chrome /usr/share/fonts/custom && \
+    chmod -R 755 /usr/share/fonts/custom
+
 USER chrome
 
-# Expose port
 EXPOSE 3000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:3000/ || exit 1
 
-# Start command
 CMD ["npm", "run", "start"]
