@@ -42,12 +42,12 @@ const ORDER_STATUS = {
       "bg-gradient-to-br from-emerald-50 to-green-50 shadow-emerald-100/50",
     iconClass: "text-emerald-600",
   },
-  cancelled: {
-    label: "Cancelled",
-    icon: XCircle,
-    className: "bg-gradient-to-br from-rose-50 to-pink-50 shadow-rose-100/50",
-    iconClass: "text-rose-600",
-  },
+  // cancelled: {
+  //   label: "Cancelled",
+  //   icon: XCircle,
+  //   className: "bg-gradient-to-br from-rose-50 to-pink-50 shadow-rose-100/50",
+  //   iconClass: "text-rose-600",
+  // },
 };
 
 export default function OrderSummaryPage() {
@@ -104,7 +104,9 @@ export default function OrderSummaryPage() {
         (!dateRange.end ||
           new Date(order.createdAt) <= new Date(dateRange.end));
       const statusMatch =
-        selectedStatus === "all" || order.status === selectedStatus;
+        selectedStatus === "all"
+          ? order.status !== "cancelled"
+          : order.status === selectedStatus;
       return dateInRange && statusMatch;
     });
   };
