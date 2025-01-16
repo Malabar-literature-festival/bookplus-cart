@@ -14,6 +14,7 @@ import {
   Download,
   Pencil,
   Save,
+  Trash2,
 } from "lucide-react";
 
 const ORDER_STATUS = {
@@ -55,10 +56,31 @@ export default function AdminOrders() {
   const [editMode, setEditMode] = useState(false);
   const [editingOrder, setEditingOrder] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [orderToDelete, setOrderToDelete] = useState(null);
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch("/api/admin/orders");
+      const data = await response.json();
+      if (data.success) {
+        setOrders(data.data);
+      } else {
+        setError("Failed to fetch orders");
+      }
+    } catch (error) {
+      setError("Failed to fetch orders");
+      console.error("Error fetching orders:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditClick = (order) => {
     setEditMode(true);
@@ -105,6 +127,34 @@ export default function AdminOrders() {
     }
   };
 
+  const handleDeleteOrder = async () => {
+    try {
+      setDeleting(true);
+      const response = await fetch(`/api/admin/orders/${orderToDelete}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        setOrders(orders.filter((order) => order._id !== orderToDelete));
+        setShowDeleteConfirm(false);
+        setOrderToDelete(null);
+        setShowOrderDetails(null);
+      } else {
+        throw new Error("Failed to delete order");
+      }
+    } catch (error) {
+      console.error("Error deleting order:", error);
+      alert("Failed to delete order. Please try again.");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const openDeleteConfirm = (orderId) => {
+    setOrderToDelete(orderId);
+    setShowDeleteConfirm(true);
+  };
+
   const handleItemQuantityChange = (index, newQuantity) => {
     setEditingOrder((prev) => ({
       ...prev,
@@ -122,24 +172,6 @@ export default function AdminOrders() {
         [field]: value,
       },
     }));
-  };
-
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch("/api/admin/orders");
-      const data = await response.json();
-      if (data.success) {
-        setOrders(data.data);
-      } else {
-        setError("Failed to fetch orders");
-      }
-    } catch (error) {
-      setError("Failed to fetch orders");
-      console.error("Error fetching orders:", error);
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleUpdateStatus = async (orderId, newStatus) => {
@@ -315,7 +347,7 @@ export default function AdminOrders() {
         </div>
       </main>
 
-      {/* Updated Order Details Modal with Edit Mode */}
+      {/* Order Details Modal */}
       {showOrderDetails && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50 overflow-y-auto">
           <div className="bg-white w-full max-w-4xl rounded-2xl shadow-xl my-8">
@@ -345,13 +377,22 @@ export default function AdminOrders() {
               </div>
               <div className="flex items-center gap-2">
                 {!editMode && (
-                  <button
-                    onClick={() => handleEditClick(showOrderDetails)}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-lg hover:bg-zinc-200 transition-colors"
-                  >
-                    <Pencil className="w-4 h-4" />
-                    Edit Order
-                  </button>
+                  <>
+                    <button
+                      onClick={() => openDeleteConfirm(showOrderDetails._id)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-lg hover:bg-red-100 transition-colors"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      Delete Order
+                    </button>
+                    <button
+                      onClick={() => handleEditClick(showOrderDetails)}
+                      className="inline-flex items-center gap-2 px-4 py-2 bg-zinc-100 text-zinc-700 rounded-lg hover:bg-zinc-200 transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Edit Order
+                    </button>
+                  </>
                 )}
                 {editMode && (
                   <button
@@ -557,6 +598,39 @@ export default function AdminOrders() {
                   </div>
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-6 z-50">
+          <div className="bg-white w-full max-w-md rounded-xl shadow-xl p-6">
+            <h3 className="text-lg font-medium text-zinc-900 mb-2">
+              Confirm Delete
+            </h3>
+            <p className="text-zinc-600 mb-6">
+              Are you sure you want to delete this order? This action cannot be
+              undone.
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteConfirm(false);
+                  setOrderToDelete(null);
+                }}
+                className="px-4 py-2 text-zinc-700 hover:bg-zinc-100 rounded-lg transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteOrder}
+                disabled={deleting}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+              >
+                {deleting ? "Deleting..." : "Delete Order"}
+              </button>
             </div>
           </div>
         </div>
