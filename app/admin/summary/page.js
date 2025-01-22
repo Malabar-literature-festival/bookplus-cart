@@ -118,28 +118,35 @@ export default function OrderSummaryPage() {
           (selectedClass === "all" || item.class === selectedClass) &&
           (selectedPublisher === "all" || item.publisher === selectedPublisher)
         ) {
-          const key = `${item.title} (Class ${item.class} - ${item.section})`;
-          if (!acc[key]) {
-            acc[key] = {
+          const bookKey = item.bookId;
+          const displayKey = `${item.title} (Class ${item.class} - ${item.section})`; // Create display key with title
+
+          if (!acc[bookKey]) {
+            acc[bookKey] = {
+              displayName: displayKey, // Store the display name
               quantity: 0,
+              bookId: bookKey,
               orders: new Set(),
               publisher: item.publisher,
               subject: item.subject,
               class: item.class,
             };
           }
-          acc[key].quantity += item.quantity;
-          acc[key].orders.add(order._id);
+
+          acc[bookKey].quantity += item.quantity;
+          acc[bookKey].orders.add(order._id);
         }
       });
       return acc;
     }, {});
 
-    return Object.entries(stats).sort((a, b) => {
-      const valueA = sortBy === "quantity" ? a[1].quantity : a[1].orders.size;
-      const valueB = sortBy === "quantity" ? b[1].quantity : b[1].orders.size;
-      return sortOrder === "desc" ? valueB - valueA : valueA - valueB;
-    });
+    return Object.entries(stats)
+      .map(([bookId, data]) => [data.displayName, data]) // Transform to use display name as key
+      .sort((a, b) => {
+        const valueA = sortBy === "quantity" ? a[1].quantity : a[1].orders.size;
+        const valueB = sortBy === "quantity" ? b[1].quantity : b[1].orders.size;
+        return sortOrder === "desc" ? valueB - valueA : valueA - valueB;
+      });
   };
 
   const handleExportCSV = () => {
@@ -392,7 +399,7 @@ export default function OrderSummaryPage() {
             <div className="space-y-4">
               {bookStatistics.map(([book, stats]) => (
                 <div
-                  key={book}
+                  key={stats.bookId}
                   className="group p-5 rounded-xl border border-zinc-100 hover:border-zinc-200 transition-all hover:shadow-sm"
                 >
                   <div className="flex justify-between items-start">
